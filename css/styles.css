@@ -1,0 +1,118 @@
+body
+{
+  font-family: sans-serif;
+}
+
+#overlay
+{
+  position: fixed; /* Fixed position to cover the whole screen */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.2); /* Semi-transparent black */
+  z-index: 1000; /* High z-index to be on top of other elements */
+  display: none; /* Hidden by default */
+}
+
+#files
+{
+  width: 120px; 
+  margin-right: 20px;
+  margin-bottom: 20px;
+}
+
+#files:focus + #checkboxes, 
+#checkboxes:hover
+{
+  display: block;
+}
+
+#checkboxes
+{
+  min-width: 260px;
+}
+
+.patient
+{
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+.main
+{
+  border: 0;
+  border-collapse: collapse;
+}
+
+.main > tbody > tr > td > h2
+{
+  white-space: nowrap;
+}
+
+
+.main > tbody > tr > td
+{
+  vertical-align: top;
+}
+
+.main > tbody > tr > td:first-child
+{
+  border-right: 1px solid black;
+  padding-right: 10px;
+  margin-right: 10px;
+}
+
+.divider-top > td
+{
+  border-right: 0 !important;
+  border-bottom: 1px solid black;
+  margin-top: 10px;
+}
+
+.divider-bottom > td
+{
+  border-right: 0 !important;
+  margin-bottom: 10px;
+}
+
+.main input
+{
+  width: 80px;
+  text-align: right;
+}
+
+.main input[type=checkbox]
+{
+  width: revert !important;
+}
+
+.main select
+{
+  width: 80px;
+}
+
+.main table
+{
+  border: 0;
+}
+
+.main svg
+{
+  border: 1px solid #CCC;
+  padding: 5px;
+  margin-top: 10px;
+}
+
+#output
+{
+  margin-top: 1em;
+}
+
+@media print
+{
+ button,
+ #output
+ {
+  display: none;
+ }
+}
