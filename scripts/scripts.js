@@ -58,6 +58,90 @@ const mimicAcronyms =
   "UVPm": "Unknown Venous Pressure mean"
 };
 
+function saveAll()
+{
+  savedata = JSON.stringify(
+  {
+    data:data,
+    reData:reData,
+    xMinMax:xMinMax,
+    yMinMax:yMinMax,
+    file:document.getElementById('files').value,
+    checkboxes:document.getElementById('checkboxes').innerHTML,
+    checked:(() => {let a=[]; [...document.getElementById('checkboxes').children].forEach((c,i) => {if (c.children[0].checked) a.push(i);});return a;})(),
+//    plot:document.getElementById('thePlot').innerHTML,
+//    sample:document.getElementById('theSample').innerHTML,
+    result:document.getElementById('theResult').innerHTML,
+    step:document.getElementById('timeStep').value,
+    stDev:document.getElementById('stDev').value,
+    startTime:document.getElementById('startTime').value,
+    endTime:document.getElementById('endTime').value,
+    depcols:document.getElementById('depcol').innerHTML,
+    depcol:document.getElementById('depcol').value,
+    window:document.getElementById('window').value,
+    batches:document.getElementById('batches').value,
+    neurons:document.getElementById('neurons').value,
+    epochs:document.getElementById('epochs').value,
+    train:document.getElementById('training').value
+  });
+  let blob = new Blob([savedata], {type: "application/json"});
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.href = url;
+  a.download=document.title + ".json";
+  a.click();
+}
+
+function loadAll()
+{
+  let fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".json, application/json";
+  fileInput.addEventListener("change", () =>
+  { 
+    let file = fileInput.files[0];
+    fileName = file.name.replace(/.json$/,"");
+    let reader = new FileReader();
+    reader.addEventListener("load", () =>
+    {
+      let savedata = JSON.parse(reader.result);
+      data = savedata.data;
+      reData = savedata.reData;
+      xMinMax = savedata.xMinMax;
+      yMinMax = savedata.yMinMax;
+      document.getElementById('files').value = savedata.file;
+      document.getElementById('checkboxes').innerHTML = savedata.checkboxes;
+      savedata.checked.forEach(i => {document.getElementById('checkboxes').children[i].children[0].checked = true;});
+//      document.getElementById('thePlot').innerHTML = savedata.plot;
+//      document.getElementById('theSample').innerHTML = savedata.sample;
+      document.getElementById('theResult').innerHTML = savedata.result;
+      document.getElementById('timeStep').value = savedata.step;
+      document.getElementById('stDev').value = savedata.stDev;
+      document.getElementById('startTime').value = savedata.startTime;
+      document.getElementById('endTime').value = savedata.endTime;
+      document.getElementById('depcol').innerHTML = savedata.depcols;
+      document.getElementById('depcol').value = savedata.depcol;
+      document.getElementById('window').value = savedata.window;
+      document.getElementById('batches').value = savedata.batches;
+      document.getElementById('neurons').value = savedata.neurons;
+      document.getElementById('epochs').value = savedata.epochs;
+      document.getElementById('training').value = savedata.train;
+
+      document.getElementById('getdata').disabled = false;
+      document.getElementById('doResample').disabled = false;
+      document.getElementById('doPredict').disabled = false;
+
+      doPlot();
+      doRePlot();
+
+      fileInput.remove();
+    });
+    reader.readAsText(file);
+  });
+  fileInput.click();
+}
+
+
 function normalize(min, max, tick)
 {
   if (min > max) [min, max] = [max, min];
@@ -255,6 +339,7 @@ onCheck = function()
       item.querySelector('span').style.opacity = 0;
     }
   }
+  document.getElementById("getdata").disabled = document.querySelectorAll('#checkboxes input[type="checkbox"]:checked').length == 0;
 }
 
 var data = [];
@@ -262,12 +347,8 @@ var xMinMax = [];
 var yMinMax = [];
 var reData;
 
-doLoad = function()
+doPlot = function()
 {
-  let labels = [];
-  let promises = [];
-  const file = document.querySelector("#files").value;
-
   const options =
   {
     drawAxes: true,
@@ -277,6 +358,18 @@ doLoad = function()
     backgroundColor: '#F8F8F8',
     axisColor: 'black',
   };
+
+  var svgData = plotDatasets(data, xMinMax[0], xMinMax[1], yMinMax[0], yMinMax[1],800,400, options);
+  var thePlot = document.getElementById('thePlot');
+  thePlot.innerHTML = "";
+  thePlot.appendChild(svgData);
+}
+
+doLoad = function()
+{
+  let labels = [];
+  let promises = [];
+  const file = document.querySelector("#files").value;
 
   data = [];
   xMinMax = [];
@@ -334,12 +427,10 @@ doLoad = function()
 
     document.getElementById('endTime').value = -Math.floor(-xMinMax[1]);
 
-    var svgData = plotDatasets(data, xMinMax[0], xMinMax[1], yMinMax[0], yMinMax[1],800,400, options);
-    var thePlot = document.getElementById('thePlot');
-    thePlot.innerHTML = "";
-    thePlot.appendChild(svgData);
+    doPlot();
     document.body.style.cursor = '';
     document.getElementById('overlay').style.display = 'none';
+    document.getElementById('doResample').disabled = false;
   });
 }
 
@@ -347,8 +438,9 @@ function remsel()
 {
   document.getElementById('files').querySelector('option:first-child').removeAttribute('selected');
   getColumns();
-  document.getElementById('getdata').disabled = false;
-  document.getElementById('doResample').disabled = false;
+  document.getElementById("getdata").disabled = true;
+  document.getElementById('doResample').disabled = true;
+  document.getElementById('doPredict').disabled = true;
 }
 
 
@@ -421,6 +513,7 @@ function startResample()
   {
     reData = trimAndImputeData(e.data);
     doResample();
+    document.getElementById('doPredict').disabled = false;
   }
   let startTime = document.getElementById('startTime').value;
   let endTime = document.getElementById('endTime').value;
@@ -429,7 +522,7 @@ function startResample()
   worker.postMessage({cmd: 'run', data: data, start: startTime, end: endTime, res: resolution, stDev: stDev });
 }
 
-function doResample()
+function doRePlot()
 {
   const options =
   {
@@ -444,11 +537,17 @@ function doResample()
   const svgData = plotDatasets(reData, xMinMax[0], xMinMax[1], yMinMax[0], yMinMax[1],800,400, options);
   let theSample = document.getElementById('theSample');
   theSample.innerHTML = "";
-  theResult = document.getElementById('theResult').innerHTML = "";
   theSample.appendChild(svgData);
+}
+
+function doResample()
+{
+  theResult = document.getElementById('theResult').innerHTML = "";
   document.body.style.cursor = '';
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('doPredict').disabled = false;
+
+  doRePlot();
 }
 
 function removeUnits(acronymWithUnits)
@@ -727,7 +826,11 @@ function doPredict()
     if (e.data.progress != undefined)
         document.getElementById('output').innerText = e.data.progress;
     else
+    {
       plotResult(e.data.yData, e.data.xInput,  e.data.yResult, e.data.train, e.data.steps);
+      document.body.style.cursor = '';
+      document.getElementById('overlay').style.display = 'none';
+    }
   }
 
   worker.postMessage({cmd: 'run', reData: reData, depcol: depcol, train: train, steps: steps, batches: batches, epochs: epochs, neurons: neurons });
@@ -752,6 +855,4 @@ function plotResult(yData, xInput, yResult, train, steps)
   let theResult = document.getElementById('theResult');
   theResult.innerHTML = "";
   theResult.appendChild(svgData);
-  document.body.style.cursor = '';
-  document.getElementById('overlay').style.display = 'none';
 }

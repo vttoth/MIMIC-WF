@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>MIMIC high-cadence</title>
 <link rel="stylesheet" href="css/styles.css?v=47" type="text/css" />
@@ -6,6 +7,12 @@
 </head>
 <body>
  <div id="overlay"></div>
+ <div class='loadsave'>
+  <button id="load" onClick="loadAll()">Load</button>
+  <button id="save" onClick="saveAll()">Save</button>
+  <br/><span class='version'>Version 0.9.0</span>
+ </div>
+
  <h1>MIMIC high-cadence data sets</h1>
 
  <table class='main'>
