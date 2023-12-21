@@ -54,7 +54,17 @@ body
 
 #checkboxes
 {
-  min-width: 260px;
+  font-size: 12px;
+  margin-left: 10px;
+  min-width: 240px;
+}
+
+.legend
+{
+  position: absolute;
+  left: 180px;
+  color: white;
+  opacity: 0;
 }
 
 .patient
@@ -135,7 +145,8 @@ body
 @media print
 {
  button,
- #output
+ #output,
+ .version
  {
   display: none;
  }

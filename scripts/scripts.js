@@ -100,7 +100,8 @@ function loadAll()
   fileInput.addEventListener("change", () =>
   { 
     let file = fileInput.files[0];
-    fileName = file.name.replace(/.json$/,"");
+    document.title = file.name.replace(/.json$/,"");
+    document.querySelector("h1").innerText = document.title;
     let reader = new FileReader();
     reader.addEventListener("load", () =>
     {
@@ -303,6 +304,7 @@ function plotDatasets(datasets, xMin, xMax, yMin, yMax, width, height, options =
     path.setAttribute("d", pathData);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", options.plotStyles[index].color);
+    path.setAttribute("opacity", options.plotStyles[index].opacity);
     path.setAttribute("stroke-width", options.plotStyles[index].lineWidth);
     path.setAttribute("stroke-dasharray", options.plotStyles[index].lineStyle === 
    'dashed' ? '4, 4' : '');
@@ -313,14 +315,14 @@ function plotDatasets(datasets, xMin, xMax, yMin, yMax, width, height, options =
 
 const styles =
 [
-  { color: 'steelblue', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'red', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'green', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'orange', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'purple', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'darkgray', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'brown', lineWidth: 0.5, lineStyle: 'solid' },
-  { color: 'black', lineWidth: 0.5, lineStyle: 'solid' },
+  { color: 'steelblue', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'red', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'green', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'orange', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'purple', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'darkgray', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'brown', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
+  { color: 'black', lineWidth: 0.5, lineStyle: 'solid', opacity: 1 },
 ];
 
 onCheck = function()
@@ -593,10 +595,7 @@ function getColumns()
       label.setAttribute("title", mimicAcronyms[removeUnits(column)]);
       div.append(label);
       let span = document.createElement("span");
-      span.style.position = 'absolute';
-      span.style.left = '200px';
-      span.style.color = 'white';
-      span.style.opacity = 0;
+      span.classList.add("legend");
       span.innerHTML = "&#9608;&#9608;&#9608;&#9608;&#9608;";
       div.append(span);
       checkboxes.append(div);
@@ -843,11 +842,13 @@ function plotResult(yData, xInput, yResult, train, steps)
   {
     drawAxes: true,
     axisLabels: { x: 'hours', y: 'values' },
-    plotStyles: [styles[depcol], JSON.parse(JSON.stringify(styles[depcol]))],
+    plotStyles: [JSON.parse(JSON.stringify(styles[depcol])), JSON.parse(JSON.stringify(styles[depcol]))],
     tickCount: { x: 5, y: 5 },
     backgroundColor: '#F8F8F8',
     axisColor: 'black',
   };
+  options.plotStyles[0].lineWidth = 0.25;
+  options.plotStyles[0].opacity = 0.5;
   options.plotStyles[1].lineWidth = 1.5;
 
 
