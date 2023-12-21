@@ -1,62 +1,35 @@
-const mimicAcronyms =
+let acronyms = {};
+
+async function loadAcronyms()
 {
-  "ABPd": "Arterial Blood Pressure diastolic",
-  "ABPm": "Arterial Blood Pressure mean",
-  "ABPs": "Arterial Blood Pressure systolic",
-  "AoD": "Aortic Pressure diastolic",
-  "AoM": "Aortic Pressure mean",
-  "AoS": "Aortic Pressure systolic",
-  "ARTd": "Arterial Pressure diastolic",
-  "ARTm": "Arterial Pressure mean",
-  "ARTs": "Arterial Pressure systolic",
-  "awRR": "Airway Respiratory Rate",
-  "btbHR": "Beat-to-beat Heart Rate",
-  "C.O.": "Cardiac Output",
-  "CPP": "Cerebral Perfusion Pressure",
-  "CVPm": "Central Venous Pressure mean",
-  "DeltaQTc": "Change in Corrected QT Interval",
-  "etCO2": "End-tidal CO2",
-  "FAPd": "Femoral Arterial Pressure diastolic",
-  "FAPm": "Femoral Arterial Pressure mean",
-  "FAPs": "Femoral Arterial Pressure systolic",
-  "HR": "Heart Rate",
-  "ICPm": "Intracranial Pressure mean",
-  "imCO2": "Immediate CO2",
-  "IPI": "Impulse Propagation Interval",
-  "NBPd": "Noninvasive Blood Pressure diastolic",
-  "NBPm": "Noninvasive Blood Pressure mean",
-  "NBPs": "Noninvasive Blood Pressure systolic",
-  "PAPd": "Pulmonary Artery Pressure diastolic",
-  "PAPm": "Pulmonary Artery Pressure mean",
-  "PAPs": "Pulmonary Artery Pressure systolic",
-  "PAWP": "Pulmonary Artery Wedge Pressure",
-  "Perf": "Perfusion",
-  "PerfPr": "Perfusion Pressure",
-  "PPV": "Pulse Pressure Variation",
-  "PVC": "Premature Ventricular Contractions",
-  "QTc": "Corrected QT Interval",
-  "QT-HR": "QT Interval at a given Heart Rate",
-  "QT": "QT Interval",
-  "RR": "Respiratory Rate",
-  "SpO2": "Peripheral Oxygen Saturation",
-  "SpO2pr": "Peripheral Oxygen Saturation pressure",
-  "ST-aVF": "ST segment measurement in lead aVF",
-  "ST-aVL": "ST segment measurement in lead aVL",
-  "ST-aVR": "ST segment measurement in lead aVR",
-  "ST-III": "ST segment measurement in lead III",
-  "ST-II": "ST segment measurement in lead II",
-  "ST-I": "ST segment measurement in lead I",
-  "ST-MCL": "ST segment measurement in lead MCL",
-  "ST-V": "ST segment measurement in lead V",
-  "Tblood": "Blood Temperature",
-  "Tesoph": "Esophageal Temperature",
-  "Tnaso": "Nasal Temperature",
-  "Trect": "Rectal Temperature",
-  "UAPd": "Unknown Arterial Pressure diastolic",
-  "UAPm": "Unknown Arterial Pressure mean",
-  "UAPs": "Unknown Arterial Pressure systolic",
-  "UVPm": "Unknown Venous Pressure mean"
-};
+  try
+  {
+    const response = await fetch("acronyms.csv");
+    const data = await response.text();
+    const lines = data.split('\n');
+
+    lines.forEach(line => 
+    {
+      // Match the key and value, accounting for optional double quotes
+      const match = line.match(/^"?(.+?)"?,\s*"?(.*?)"?$/);
+      if (match) 
+      {
+        const key = match[1];
+        const value = match[2];
+        acronyms[key] = value;
+      }
+    });
+  }
+  catch (error)
+  {
+    console.error('Error fetching or parsing acronyms:', error);
+  }
+}
+
+window.addEventListener("load", function()
+{
+  loadAcronyms();
+});
 
 function saveAll()
 {
@@ -69,8 +42,6 @@ function saveAll()
     file:document.getElementById('files').value,
     checkboxes:document.getElementById('checkboxes').innerHTML,
     checked:(() => {let a=[]; [...document.getElementById('checkboxes').children].forEach((c,i) => {if (c.children[0].checked) a.push(i);});return a;})(),
-//    plot:document.getElementById('thePlot').innerHTML,
-//    sample:document.getElementById('theSample').innerHTML,
     result:document.getElementById('theResult').innerHTML,
     step:document.getElementById('timeStep').value,
     stDev:document.getElementById('stDev').value,
@@ -113,8 +84,6 @@ function loadAll()
       document.getElementById('files').value = savedata.file;
       document.getElementById('checkboxes').innerHTML = savedata.checkboxes;
       savedata.checked.forEach(i => {document.getElementById('checkboxes').children[i].children[0].checked = true;});
-//      document.getElementById('thePlot').innerHTML = savedata.plot;
-//      document.getElementById('theSample').innerHTML = savedata.sample;
       document.getElementById('theResult').innerHTML = savedata.result;
       document.getElementById('timeStep').value = savedata.step;
       document.getElementById('stDev').value = savedata.stDev;
@@ -592,7 +561,8 @@ function getColumns()
       let label = document.createElement("label");
       label.innerText = column;
       label.setAttribute("for", "cb" + (lbl++));
-      label.setAttribute("title", mimicAcronyms[removeUnits(column)]);
+      const acronym = acronyms[removeUnits(column)];
+      if (acronym != undefined) label.setAttribute("title", acronym);
       div.append(label);
       let span = document.createElement("span");
       span.classList.add("legend");
