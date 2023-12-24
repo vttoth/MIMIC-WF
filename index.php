@@ -71,6 +71,9 @@
      <tr><td>Neurons:</td><td><input id='neurons' value = '5'/></td></tr>
      <tr><td>Epochs:</td><td><input id='epochs' value = '20'/></td></tr>
      <tr><td>Training %:</td><td><input id='training' value='25'/></td></tr>
+     <tr><td colspan=2><h4>Early stopping parameters</h4></td></tr>
+     <tr><td>Patience:</td><td><input id='patience' value='5'/></td></tr>
+     <tr><td>Validation %:</td><td><input id='validation' value='25'/></td></tr>
      <tr><td>&nbsp;</td><td><button id='doPredict' disabled onclick="doPredict()">Run model</button>
     </table>
    </td>

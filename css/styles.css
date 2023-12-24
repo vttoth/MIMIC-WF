@@ -140,12 +140,12 @@ body
 #output
 {
   margin-top: 1em;
+  font-family: serif;
 }
 
 @media print
 {
  button,
- #output,
  .version
  {
   display: none;
