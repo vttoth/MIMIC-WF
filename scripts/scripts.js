@@ -43,7 +43,6 @@ function saveAll()
     file:document.getElementById('files').value,
     checkboxes:document.getElementById('checkboxes').innerHTML,
     checked:(() => {let a=[]; [...document.getElementById('checkboxes').children].forEach((c,i) => {if (c.children[0].checked) a.push(i);});return a;})(),
-    //result:document.getElementById('theResult').innerHTML,
     step:document.getElementById('timeStep').value,
     stDev:document.getElementById('stDev').value,
     startTime:document.getElementById('startTime').value,
@@ -56,7 +55,8 @@ function saveAll()
     epochs:document.getElementById('epochs').value,
     train:document.getElementById('training').value,
     patience:document.getElementById('patience').value,
-    validation:document.getElementById('validation').value
+    validation:document.getElementById('validation').value,
+    output:document.getElementById('output').innerHTML
   });
   let blob = new Blob([savedata], {type: "application/json"});
   let url = URL.createObjectURL(blob);
@@ -104,6 +104,7 @@ function loadAll()
       if (savedata.patience != undefined) document.getElementById('patience').value = savedata.patience;
       if (savedata.validation != undefined) document.getElementById('validation').value = savedata.validation;
       else document.getElementById('validation').value = 0;
+      document.getElementById('output').innerHTML = savedata.output;
 
       document.getElementById('getdata').disabled = false;
       document.getElementById('doResample').disabled = false;
@@ -119,7 +120,6 @@ function loadAll()
   });
   fileInput.click();
 }
-
 
 function normalize(min, max, tick)
 {
@@ -651,6 +651,7 @@ function doPredict()
 
   function prePredict(e)
   {
+    let theEpoch = 0;
     async function runPrediction(xData, yData, xInput, train, steps, batches, epochs, neurons, patience, validation)
     {
       importScripts("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest");
@@ -742,9 +743,6 @@ function doPredict()
 
       self.postMessage({progress: "Packaging the data..."});
 
-//      let xs = normalizeAndPackageData(xData, "x", "y", steps, batches);
-//      let ys = normalizeAndPackageData(yData, "x", "y", steps, batches);
-
       const trainSize = Math.floor(xData[0].length * (1 - 0.01*validation) / (steps*batches)) * (steps*batches);
 console.log("trainSize = " + trainSize);
 console.log("yData[0].length = " + yData[0].length);
@@ -774,7 +772,6 @@ console.log("valXData[0].length = " + valXData[0].length);
         epochs: epochs,
         batchSize: batches,
         shuffle: false,
-//        validationSplit: 0.5, // Use a portion of the training data for validation
         callbacks: 
         {
           onEpochBegin: () =>
@@ -783,19 +780,22 @@ console.log("valXData[0].length = " + valXData[0].length);
           },
           onEpochEnd: (epoch, logs) =>
           {
-            self.postMessage({progress: `Epoch ${epoch}: ${doValidation ? "validation " : ""}loss = ${(doValidation ? logs.val_loss : logs.loss)}`});
-            if (!doValidation) return;
-//            self.postMessage({progress: `Epoch ${epoch}: loss = ${logs.loss}`});
-
-
-//            if (logs.loss < bestValLoss - min_delta)
+            self.postMessage(
+            {
+              progress: `Epoch ${epoch}: ${doValidation ? "validation " : ""}loss = ${(doValidation ? logs.val_loss : logs.loss)}`
+            });
+            if (!doValidation)
+            {
+              theEpoch = epoch;
+              return;
+            }
             if (logs.val_loss < bestValLoss - min_delta)
             {
               bestValLoss = logs.val_loss;
-//              bestValLoss = logs.loss;
               epochsWithoutImprovement = 0;
               // Save a copy of the current best weights
               bestWeights = model.getWeights().map(w => w.clone());
+              theEpoch = epoch;
             }
             else
             {
@@ -877,7 +877,7 @@ console.log("valXData[0].length = " + valXData[0].length);
         const resultData = result.dataSync();
         result.dispose();
         flatten(resultData);
-        self.postMessage({xData: xData, yData: yData, xInput: xInput, yResult: yResult, train: train, steps: steps});
+        self.postMessage({yResult: yResult, epochs: theEpoch});
       });
     }
   }
@@ -894,6 +894,7 @@ console.log("valXData[0].length = " + valXData[0].length);
     {
       yResult = e.data.yResult;
 
+      showResult(e.data.epochs);
       plotResult();
       document.body.style.cursor = '';
       document.getElementById('overlay').style.display = 'none';
@@ -914,24 +915,9 @@ console.log("valXData[0].length = " + valXData[0].length);
     validation: validation });
 }
 
-// function plotResult(yData, xInput, train, steps)
-function plotResult()
+function showResult(maxEpoch)
 {
   const depcol = 1*document.getElementById('depcol').value;
-  const steps = 1*document.getElementById('window').value;
-  const train = 1*document.getElementById('training').value;
-  let yData = [];
-  let xInput = [];
-
-  for (let i = 0; i < reData.length; i++)
-  {
-    if (i == depcol) yData.push(reData[i].toSpliced(Math.floor(0.01*train*reData[i].length)));
-    else
-    {
-      xInput.push(reData[i].toSpliced(0, Math.floor(0.01*train*reData[i].length)));
-    }
-  }
-
   let sumOfSquares = 0;
   let count = 0;
   let reDataIndex = 0;
@@ -976,7 +962,14 @@ function plotResult()
   }
   let variance = (sum2 - sum**2 / count) / count;
   let chiSquaredPerDF = sumOfSquares / variance / degreesOfFreedom;
-  document.getElementById('output').innerHTML = "(&chi;&sup2;)<sub>&nu;</sub> = " + chiSquaredPerDF.toPrecision(5);
+  document.getElementById('output').innerHTML =
+    "(&chi;&sup2;)<sub>&nu;</sub> = " + chiSquaredPerDF.toPrecision(5) +
+    " (epochs = " + (maxEpoch*1+1) + ")";
+}
+
+function plotResult()
+{
+  const depcol = 1*document.getElementById('depcol').value;
 
   const options =
   {
