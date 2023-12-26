@@ -417,6 +417,9 @@ doLoad = function()
 
 function remsel()
 {
+  document.title = "MIMIC-high-cadence-0000-" + document.querySelector("#files").value.substr(0,8) + "-1";
+  document.querySelector("h1").innerText = document.title;
+
   document.getElementById('files').querySelector('option:first-child').removeAttribute('selected');
   getColumns();
   document.getElementById("getdata").disabled = true;
@@ -431,6 +434,7 @@ function doWork(e)
   {
     return Math.exp(-0.5 * Math.pow(distance / stdDev, 2));
   }
+
   function resampleData(data, resolution, stdDev, startTime, endTime)
   {
     if (startTime < data[0].x) startTime = data[0].x;
@@ -441,29 +445,76 @@ function doWork(e)
     // Initialize the resampled array
     const resampled = [];
 
+    // Define a threshold for the Gaussian weight below which we stop considering points
+    const weightThreshold = 1e-12;
+
+    // Function to perform binary search
+    function binarySearchClosest(array, target)
+    {
+      let start = 0;
+      let end = array.length - 1;
+      let bestIndex = -1;
+      let bestDist = Infinity;
+  
+      while (start <= end)
+      {
+        let mid = Math.floor((start + end) / 2);
+        let dist = Math.abs(array[mid].x - target);
+        if (dist < bestDist)
+        {
+          bestDist = dist;
+          bestIndex = mid;
+        }
+        if (array[mid].x < target)
+        {
+          start = mid + 1;
+        }
+        else if (array[mid].x > target)
+        {
+          end = mid - 1;
+        }
+        else
+        {
+          return mid; // Exact match found
+        }
+      }
+      return bestIndex; // Return the index of the closest element
+    }
+  
     // Loop over the desired timestamps
     for (let t = startTime; t <= endTime; t += resolution)
     {
       let weightedSum = 0;
       let weightSum = 0;
-
-      // Loop over the original data to compute the weighted average
-      for (let i = 0; i < data.length; i++)
+  
+      // Find the closest data point to the timestamp t using binary search
+      const closestIndex = binarySearchClosest(data, t);
+  
+      // Sample nearby points on both sides of t
+      for (let i = closestIndex; i < data.length; i++)
       {
         const distance = Math.abs(data[i].x - t);
         const weight = gaussianWeight(distance, stdDev);
-
+        if (weight < weightThreshold) break; // Stop if weight is too small
         weightedSum += data[i].y * weight;
         weightSum += weight;
       }
-
+      for (let i = closestIndex - 1; i >= 0; i--)
+      {
+        const distance = Math.abs(data[i].x - t);
+        const weight = gaussianWeight(distance, stdDev);
+        if (weight < weightThreshold) break; // Stop if weight is too small
+        weightedSum += data[i].y * weight;
+        weightSum += weight;
+      }
+  
       // Compute the weighted average for the current timestamp
       const weightedAverage = weightedSum / weightSum;
-
+  
       // Add the resampled point to the array
       resampled.push({ x: t, y: weightedAverage });
     }
-
+  
     return resampled;
   }
 
@@ -523,7 +574,8 @@ function doRePlot()
 
 function doResample()
 {
-  theResult = document.getElementById('theResult').innerHTML = "";
+  document.getElementById('theResult').innerHTML = "";
+  document.getElementById('output').innerHTML = "";
   document.body.style.cursor = '';
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('doPredict').disabled = false;
@@ -546,6 +598,7 @@ function getColumns()
   document.getElementById('thePlot').innerHTML = "";
   document.getElementById('theSample').innerHTML = "";
   document.getElementById('theResult').innerHTML = "";
+  document.getElementById('output').innerHTML = "";
   let lbl = 1;
 
   fetch(`getcol.php?file=${file}`)
