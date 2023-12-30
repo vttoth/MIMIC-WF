@@ -10,7 +10,7 @@
  <div class='loadsave'>
   <button id="load" onClick="loadAll()">Load</button>
   <button id="save" onClick="saveAll()">Save</button>
-  <br/><span class='version'>Version 0.9.1</span>
+  <br/><span class='version'>Version 0.9.2</span>
  </div>
 
  <h1>MIMIC high-cadence data sets</h1>
@@ -66,14 +66,14 @@
     <h2>Modeling</h2>
     <table>
      <tr><td>Dependent column:</td><td><select id='depcol'></select></td></tr>
-     <tr><td>Window size:</td><td><input id='window' value='10'/></td></tr>
-     <tr><td>Batch size:</td><td><input id='batches' value = '1'/></td></tr>
-     <tr><td>Neurons:</td><td><input id='neurons' value = '15'/></td></tr>
-     <tr><td>Epochs:</td><td><input id='epochs' value = '100'/></td></tr>
-     <tr><td>Training %:</td><td><input id='training' value='20'/></td></tr>
+     <tr><td><span title="The number of timestamps in a single sequence; should be long enough for patterns to emerge.">Window size</span>:</td><td><input id='window' value='10'/></td></tr>
+     <tr><td><span title="The number of sequences to process in parallel. Use '1' to maintain state continuity across all sequences.">Batch size</span>:</td><td><input id='batches' value = '1'/></td></tr>
+     <tr><td><span title="A measure of the model's capacity to capture information at each time step.">Output dimensions</span>:</td><td><input id='neurons' value = '15'/></td></tr>
+     <tr><td><span title="Maximum number of full passes through the training data during model training.">Epochs</span>:</td><td><input id='epochs' value = '100'/></td></tr>
+     <tr><td><span title="Percentage of the dataset to be used to train the network.">Training %</span>:</td><td><input id='training' value='20'/></td></tr>
      <tr><td colspan=2><h4>Early stopping parameters</h4></td></tr>
-     <tr><td>Patience:</td><td><input id='patience' value='10'/></td></tr>
-     <tr><td>Validation %:</td><td><input id='validation' value='25'/></td></tr>
+     <tr><td><span title="Number of epochs with no improvement before training is terminated to prevent overfitting.">Patience</span>:</td><td><input id='patience' value='10'/></td></tr>
+     <tr><td><span title="Percentage of training data for use in monitoring to prevent overfitting.">Validation %</span>:</td><td><input id='validation' value='25'/></td></tr>
      <tr><td>&nbsp;</td><td><button id='doPredict' disabled onclick="doPredict()">Run model</button>
     </table>
    </td>

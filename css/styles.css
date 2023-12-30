@@ -143,6 +143,12 @@ body
   font-family: serif;
 }
 
+.error
+{
+  color: red;
+  font-weight: bold;
+}
+
 @media print
 {
  button,

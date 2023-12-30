@@ -417,7 +417,7 @@ doLoad = function()
 
 function remsel()
 {
-  document.title = "MIMIC-high-cadence-0000-" + document.querySelector("#files").value.substr(0,8) + "-1";
+  document.title = "MIMIC-high-cadence-" + document.querySelector("#files").value.substr(0,8) + "-1";
   document.querySelector("h1").innerText = document.title;
 
   document.getElementById('files').querySelector('option:first-child').removeAttribute('selected');
@@ -541,6 +541,12 @@ function startResample()
   document.getElementById('overlay').style.display = 'block';
 
   let worker = new Worker(window.URL.createObjectURL(new Blob(["onmessage=" + doWork.toString()], {type: "text/javascript"})));
+
+  worker.onerror = function(e)
+  {
+    console.log("There was an error in the worker (2).");
+  }
+
   worker.onmessage = function(e)
   {
     reData = trimAndImputeData(e.data);
@@ -931,17 +937,34 @@ console.log("valXData[0].length = " + valXData[0].length);
         result.dispose();
         flatten(resultData);
         self.postMessage({yResult: yResult, epochs: theEpoch});
+      }).catch(error =>
+      {
+console.log(error);
+        //self.postMessage({error: "An error has occured."});
+        self.postMessage({error: error.toString().split('\n')[0]});
       });
     }
   }
 
   let worker = new Worker(window.URL.createObjectURL(new Blob(["onmessage=" + prePredict.toString()], {type: "text/javascript"})));
+
+  worker.onerror = function(e)
+  {
+    console.log("There was an error in the worker (1).");
+  }
+
   worker.onmessage = function(e)
   {
     if (e.data.progress != undefined)
     {
       document.getElementById('output').innerText = e.data.progress;
       console.log(e.data.progress);
+    }
+    else if (e.data.error != undefined)
+    {
+      document.getElementById('output').innerHTML = "<span class='error'>" + e.data.error + "</span>";
+      document.body.style.cursor = '';
+      document.getElementById('overlay').style.display = 'none';
     }
     else
     {
@@ -1041,4 +1064,9 @@ function plotResult()
   let theResult = document.getElementById('theResult');
   theResult.innerHTML = "";
   theResult.appendChild(svgData);
+}
+
+window.onerror = function()
+{
+  console.log("There was a big honking error somewhere.");
 }
