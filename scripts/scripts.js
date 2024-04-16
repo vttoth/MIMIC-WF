@@ -50,13 +50,20 @@ function saveAll()
     depcols:document.getElementById('depcol').innerHTML,
     depcol:document.getElementById('depcol').value,
     window:document.getElementById('window').value,
+    seed:document.getElementById('seed').value,
     batches:document.getElementById('batches').value,
     neurons:document.getElementById('neurons').value,
     epochs:document.getElementById('epochs').value,
+    learnrate:document.getElementById('learnrate').value,
     train:document.getElementById('training').value,
     patience:document.getElementById('patience').value,
     validation:document.getElementById('validation').value,
-    output:document.getElementById('output').innerHTML
+    output:document.getElementById('output').innerHTML,
+    result:document.getElementById('result').innerHTML,
+    adam:document.getElementById('useAdam').checked,
+    beta1:document.getElementById('beta1').value,
+    beta2:document.getElementById('beta2').value,
+    epsilon:document.getElementById('epsilon').value
   });
   let blob = new Blob([savedata], {type: "application/json"});
   let url = URL.createObjectURL(blob);
@@ -100,15 +107,32 @@ function loadAll()
       document.getElementById('batches').value = savedata.batches;
       document.getElementById('neurons').value = savedata.neurons;
       document.getElementById('epochs').value = savedata.epochs;
+      if (savedata.learnrate != undefined) document.getElementById('learnrate').value = savedata.learnrate;
       document.getElementById('training').value = savedata.train;
       if (savedata.patience != undefined) document.getElementById('patience').value = savedata.patience;
       if (savedata.validation != undefined) document.getElementById('validation').value = savedata.validation;
+      if (savedata.seed != undefined) document.getElementById('seed').value = savedata.seed;
       else document.getElementById('validation').value = 0;
       document.getElementById('output').innerHTML = savedata.output;
+      document.getElementById('result').innerHTML = savedata.result;
+
+      const adam = savedata.adam != undefined ? savedata.adam : false;
+      document.getElementById('useAdam').checked = adam;
+      document.getElementById('beta1').disabled = !adam;
+      document.getElementById('beta2').disabled = !adam;
+      document.getElementById('epsilon').disabled = !adam;
+      document.getElementById('beta1').value = savedata.beta1 != undefined ? savedata.beta1 : 0.9;
+      document.getElementById('beta2').value = savedata.beta2 != undefined ? savedata.beta2 : 0.999;
+      document.getElementById('epsilon').value = savedata.epsilon != undefined ? savedata.epsilon : 1e-8;
 
       document.getElementById('getdata').disabled = false;
       document.getElementById('doResample').disabled = false;
       document.getElementById('doPredict').disabled = false;
+
+      document.querySelectorAll("#checkboxes input").forEach(item =>
+      {
+        item.addEventListener("click", onCheck);
+      });
 
       doPlot();
       doRePlot();
@@ -437,7 +461,7 @@ function doWork(e)
 
   function resampleData(data, resolution, stdDev, startTime, endTime)
   {
-    if (startTime < data[0].x) startTime = data[0].x;
+    // if (startTime < data[0].x) startTime = data[0].x;
     startTime = Math.floor(startTime / resolution) * resolution;
     if (endTime > data[data.length - 1].x) endTime = data[data.length - 1].x;
     endTime = -Math.floor(-endTime / resolution) * resolution;
@@ -690,7 +714,7 @@ function trimAndImputeData(dataArrays)
 
   return imputedDataArrays;
 }
-
+/*
 function doPredict()
 {
   const steps = 1*document.getElementById('window').value;
@@ -764,6 +788,17 @@ function doPredict()
         recurrentInitializer: tf.initializers.heUniform({ seed: 24 }), // Set the seed for recurrent weights
         biasInitializer: 'zeros' // Typically biases are initialized to zeros
       }));
+/--*
+model.add(tf.layers.gru({
+//  units: neurons,
+  units: Math.max(2, Math.floor(neurons/2)),
+  returnSequences: true,
+  stateful: true,
+  kernelInitializer: tf.initializers.heUniform({ seed: 42 }),
+  recurrentInitializer: tf.initializers.heUniform({ seed: 24 }), // Set the seed for recurrent weights
+  biasInitializer: 'zeros' // Typically biases are initialized to zeros
+}));
+*--/
 
       // Add a time-distributed dense layer to predict a sequence of 'z' values
       model.add(tf.layers.timeDistributed(
@@ -958,6 +993,10 @@ console.log(error);
     if (e.data.progress != undefined)
     {
       document.getElementById('output').innerText = e.data.progress;
+      // Great idea but we haven't run the model yet and it's costly to do so.
+      //showResult(e.data.epochs);
+      //plotResult();
+      //document.getElementById('output').innerHTML += "<br/>" + e.data.progress;
       console.log(e.data.progress);
     }
     else if (e.data.error != undefined)
@@ -991,6 +1030,8 @@ console.log(error);
     validation: validation });
 }
 
+*/
+/*
 function showResult(maxEpoch)
 {
   const depcol = 1*document.getElementById('depcol').value;
@@ -1042,7 +1083,7 @@ function showResult(maxEpoch)
     "(&chi;&sup2;)<sub>&nu;</sub> = " + chiSquaredPerDF.toPrecision(5) +
     " (epochs = " + (maxEpoch*1+1) + ")";
 }
-
+*/
 function plotResult()
 {
   const depcol = 1*document.getElementById('depcol').value;
@@ -1064,6 +1105,15 @@ function plotResult()
   let theResult = document.getElementById('theResult');
   theResult.innerHTML = "";
   theResult.appendChild(svgData);
+}
+
+function onAdam()
+{
+  const checked = document.getElementById('useAdam').checked;
+  console.log("ADAM is " + (checked ? "is" : "isn't") + " checked.");
+  document.getElementById("beta1").disabled = !checked;
+  document.getElementById("beta2").disabled = !checked;
+  document.getElementById("epsilon").disabled = !checked;
 }
 
 window.onerror = function()

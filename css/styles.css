@@ -59,6 +59,11 @@ body
   min-width: 240px;
 }
 
+.subopt
+{
+  padding-left: 1.5em;
+}
+
 .legend
 {
   position: absolute;
@@ -137,11 +142,25 @@ body
   margin-top: 10px;
 }
 
-#output
-{
-  margin-top: 1em;
-  font-family: serif;
+#output {
+  border: 1px solid gray;
+  position: absolute;
+/*  top: 0;
+  left: 320px; */
+  height: 200px;
+  width: 500px;
+  overflow-y: auto;
+  font-family: monospace;
 }
+#clearoutput {
+/*
+  position: absolute;
+  top: 210px;
+  left: 320px;
+*/
+  margin: 10px;
+}
+
 
 .error
 {
