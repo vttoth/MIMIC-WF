@@ -22,7 +22,7 @@
    <td>
     <h2 class='patient'>Patient:</h2>
 <?php
- $dir = '../DATA/'; 
+ $dir = './DATA/'; 
  $files = scandir($dir);
  $options = '';
  foreach ($files as $file)
@@ -75,16 +75,18 @@
      <tr><td><span title="Maximum number of full passes through the training data during model training.">Epochs</span>:</td><td><input id='epochs' value = '100'/></td></tr>
      <tr><td><span title="Percentage of the dataset to be used to train the network.">Training %</span>:</td><td><input id='training' value='20'/></td></tr>
      <tr><td><span title="The rate at which new information is incorporated into the model during training.">Learning rate</span>:</td><td><input id='learnrate' value = '0.3'/></td></tr>
+     <tr><td><span title="Number of epochs with no improvement before training is terminated to prevent overfitting.">Patience</span>:</td><td><input id='patience' value='10'/></td></tr>
      <tr><td><span title="The Adam optimizer"><label for='useAdam'>Use Adam optimizer</label></span>:</td><td><input id='useAdam' type='checkbox' onchange='onAdam()'/></td></tr>
      <tr><td class='subopt'><span title="The first parameter of the Adam optimizer.">&beta;<sub>1</sub></span>:</td><td><input id='beta1' value = '0.9' disabled/></td></tr>
      <tr><td class='subopt'><span title="The second parameter of the Adam optimizer.">&beta;<sub>2</sub></span>:</td><td><input id='beta2' value = '0.999' disabled/></td></tr>
      <tr><td class='subopt'><span title="The softening parameter of the Adam optimizer.">&epsilon;</span>:</td><td><input id='epsilon' value = '1e-8' disabled /></td></tr>
-     <tr><td colspan=2><h4>Early stopping parameters</h4></td></tr>
+<!--     <tr><td colspan=2><h4>Early stopping parameters</h4></td></tr>
      <tr><td><span title="Number of epochs with no improvement before training is terminated to prevent overfitting.">Patience</span>:</td><td><input id='patience' value='10'/></td></tr>
-     <tr><td><span title="Percentage of training data for use in monitoring to prevent overfitting.">Validation %</span>:</td><td><input id='validation' value='25'/></td></tr>
+     <tr><td><span title="Percentage of training data for use in monitoring to prevent overfitting.">Validation %</span>:</td><td><input id='validation' value='25'/></td></tr> -->
 <!--     <tr><td>&nbsp;</td><td><button id='doPredict' disabled onclick="doPredict()">Run model</button> -->
+<tr><td colspan=2>&nbsp;</td></tr>
      <tr><td>&nbsp;</td><td><button id='doPredict' disabled onclick="runGRUNetwork()">Run model</button>
-     <tr><td>&nbsp;</td><td><button id='doInterrupt' style='display:none' onclick="interruptRun()">Terminate</button>
+                            <button id='doInterrupt' style='display:none' onclick="interruptRun()">Terminate</button></td></tr>
     </table>
    </td>
    <td><div id='theResult'></div></td>
