@@ -15,15 +15,15 @@ class GRUCell {
     this.Uh = new Matrix(hidden_size, hidden_size);
     this.bh = new Matrix(hidden_size, 1);
 
-    this.Wz.randomize(input_size, hidden_size);
-    this.Uz.randomize(hidden_size, hidden_size);
-    this.bz.randomize(1, hidden_size);
-    this.Wr.randomize(input_size, hidden_size);
-    this.Ur.randomize(hidden_size, hidden_size);
-    this.br.randomize(1, hidden_size);
-    this.Wh.randomize(input_size, hidden_size);
-    this.Uh.randomize(hidden_size, hidden_size);
-    this.bh.randomize(1, hidden_size);
+    this.Wz.XGrandomize(input_size, hidden_size);
+    this.Uz.XGrandomize(hidden_size, hidden_size);
+    this.bz.grandomize(0, 0.25);
+    this.Wr.XGrandomize(input_size, hidden_size);
+    this.Ur.XGrandomize(hidden_size, hidden_size);
+    this.br.randomize(1, 2);
+    this.Wh.XGrandomize(input_size, hidden_size);
+    this.Uh.XGrandomize(hidden_size, hidden_size);
+    this.bh.grandomize(0, 0.25);
   }
 
   forward(xt, ht_prev) {

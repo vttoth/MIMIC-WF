@@ -90,14 +90,43 @@ class Matrix {
     return result;
   }
 
-  randomize(fan_in, fan_out) {
+  XGrandomize(fan_in, fan_out)
+  {
     const limit = Math.sqrt(6.0 / (fan_in + fan_out));
-    for (let i = 0; i < this.rows; ++i) {
-      for (let j = 0; j < this.cols; ++j) {
+    this.randomize(-limit, limit);
+/*
+    for (let i = 0; i < this.rows; ++i)
+    {
+      for (let j = 0; j < this.cols; ++j)
+      {
         this.data[i][j] = frand() * 2 * limit - limit;
       }
     }
+*/
   }
+
+  randomize(min, max)
+  {
+    for (let i = 0; i < this.rows; ++i)
+    {
+      for (let j = 0; j < this.cols; ++j)
+      {
+        this.data[i][j] = frand() * (max - min) + min;
+      }
+    }
+  }
+
+  grandomize(mean, stdev)
+  {
+    for (let i = 0; i < this.rows; ++i)
+    {
+      for (let j = 0; j < this.cols; ++j)
+      {
+        this.data[i][j] = grand(mean, stdev);
+      }
+    }
+  }
+
 
   transpose() {
     const result = new Matrix(this.cols, this.rows);

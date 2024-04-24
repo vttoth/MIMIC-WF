@@ -31,8 +31,8 @@ class GRUNetwork
     this.Wo = new Matrix(1, hidden_size);
     this.bo = new Matrix(1, 1);
 
-    this.Wo.randomize(hidden_size, 1);
-    this.bo.randomize(1, 1);
+    this.Wo.XGrandomize(hidden_size, 1);
+    this.bo.grandomize(0, 0.25);
   }
 
   log(text, type, progressCallback)
@@ -86,7 +86,8 @@ class GRUNetwork
     return loss / predictions.length;
   }
 
-  backward(dht, input, cells, t, dWz_accum, dUz_accum, dbz_accum, dWr_accum, dUr_accum, dbr_accum, dWh_accum, dUh_accum, dbh_accum, clip_threshold)
+//  backward(dht, input, cells, t, dWz_accum, dUz_accum, dbz_accum, dWr_accum, dUr_accum, dbr_accum, dWh_accum, dUh_accum, dbh_accum, clip_threshold)
+  backward(Dht, Drt, Dzt, Dh_candidate, input, cells, t, dWz_accum, dUz_accum, dbz_accum, dWr_accum, dUr_accum, dbr_accum, dWh_accum, dUh_accum, dbh_accum, clip_threshold)
   {
     for (let i = this.num_layers - 1; i >= 0; --i)
     {
@@ -97,15 +98,19 @@ class GRUNetwork
       const zt = cell.zt;
       const rt = cell.rt;
       const h_candidate = cell.h_candidate;
+      const dht = Dht[i];
+      const dzt = Dzt[i];
+      const dh_candidate = Dh_candidate[i];
+      const drt = Drt[i];
 
-      const dzt = dht.elementMultiply(h_candidate.subtract(ht_prev)).elementMultiply(zt.applyFunction(GRUNetwork.sigmoid_derivative));
+//      const dzt = dht.elementMultiply(h_candidate.subtract(ht_prev)).elementMultiply(zt.applyFunction(GRUNetwork.sigmoid_derivative));
       dWz_accum[i] = dWz_accum[i].add(dzt.multiply(xt.transpose()));
       dUz_accum[i] = dUz_accum[i].add(dzt.multiply(ht_prev.transpose()));
       dbz_accum[i] = dbz_accum[i].add(dzt);
 
-      const dh_candidate = dht.elementMultiply(zt.subtract(zt.elementMultiply(h_candidate.elementMultiply(h_candidate))));
+//      const dh_candidate = dht.elementMultiply(zt.subtract(zt.elementMultiply(h_candidate.elementMultiply(h_candidate))));
 
-      const drt = dh_candidate.elementMultiply(cell.Uh.transpose().multiply(ht_prev)).elementMultiply(rt.applyFunction(GRUNetwork.sigmoid_derivative));
+//      const drt = dh_candidate.elementMultiply(cell.Uh.transpose().multiply(ht_prev)).elementMultiply(rt.applyFunction(GRUNetwork.sigmoid_derivative));
       dWr_accum[i] = dWr_accum[i].add(drt.multiply(xt.transpose()));
       dUr_accum[i] = dUr_accum[i].add(drt.multiply(ht_prev.transpose()));
       dbr_accum[i] = dbr_accum[i].add(drt);
@@ -134,7 +139,7 @@ class GRUNetwork
         dbh_accum[i] = dbh_accum[i].multiply(scale_factor);
       }
 
-      dht = cell.Uz.transpose().multiply(dzt).add(cell.Ur.transpose().multiply(drt)).add(cell.Uh.transpose().multiply(dh_candidate.elementMultiply(rt)));
+//      dht = cell.Uz.transpose().multiply(dzt).add(cell.Ur.transpose().multiply(drt)).add(cell.Uh.transpose().multiply(dh_candidate.elementMultiply(rt)));
     }
   }
 
@@ -218,7 +223,7 @@ class GRUNetwork
 
     function doEpoch(gnet, epoch)
     {
-      const ht_prev = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, 1));
+      const ht_prevs = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, 1));
 
       let total_loss = 0.0;
 
@@ -235,8 +240,8 @@ class GRUNetwork
           let input = input_sequences[i][t];
           for (let j = 0; j < gnet.num_layers; ++j)
           {
-            input = gnet.gru_cells[j][t].forward(input, ht_prev[j]);
-            ht_prev[j] = input;
+            input = gnet.gru_cells[j][t].forward(input, ht_prevs[j]);
+            ht_prevs[j] = input;
           }
           hidden_states.push(input);
 
@@ -268,7 +273,75 @@ class GRUNetwork
         const dUh_accum = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, gnet.hidden_size, 0.0));
         const dbh_accum = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, 1, 0.0));
 
-        let dht = gnet.Wo.transpose().multiply(outputs[gnet.sequence_length - 1].subtract(target_sequences[i][gnet.sequence_length - 1]).multiply(2.0 / outputs.length));
+//        let dht = gnet.Wo.transpose().multiply(outputs[gnet.sequence_length - 1].subtract(target_sequences[i][gnet.sequence_length - 1]).multiply(2.0 / outputs.length));
+
+        const Dht = Array.from(Array(gnet.sequence_length), () => new Array(gnet.num_layers).fill(0));
+        const Drt = Array.from(Array(gnet.sequence_length), () => new Array(gnet.num_layers).fill(0));
+        const Dzt = Array.from(Array(gnet.sequence_length), () => new Array(gnet.num_layers).fill(0));
+        const Dh_candidate = Array.from(Array(gnet.sequence_length), () => new Array(gnet.num_layers).fill(0));
+
+        const T = gnet.sequence_length - 1;
+        const J = gnet.num_layers - 1;
+
+        const cell = gnet.gru_cells[J][T];
+        const ht_prev = cell.ht_prev;
+        const zt = cell.zt;
+        const rt = cell.rt;
+        const h_candidate = cell.h_candidate;
+
+        Dht[T][J] = gnet.Wo.transpose().multiply(outputs[T].subtract(target_sequences[i][T]).multiply(2.0 / outputs.length));
+        Dzt[T][J] = Dht[T][J].elementMultiply(h_candidate.subtract(ht_prev)).elementMultiply(zt.applyFunction(GRUNetwork.sigmoid_derivative));
+        Dh_candidate[T][J] = Dht[T][J].elementMultiply(zt.subtract(zt.elementMultiply(h_candidate.elementMultiply(h_candidate))));
+        Drt[T][J] = Dh_candidate[T][J].elementMultiply(cell.Uh.transpose().multiply(ht_prev)).elementMultiply(rt.applyFunction(GRUNetwork.sigmoid_derivative));
+
+        for (let j = J - 1; j >= 0; --j)
+        {
+          const cell = gnet.gru_cells[j][T];
+          const ht_prev = cell.ht_prev;
+          const zt = cell.zt;
+          const rt = cell.rt;
+          const h_candidate = cell.h_candidate;
+          const pcell = gnet.gru_cells[j+1][T];
+          const Wz = pcell.Wz;
+          const Wr = pcell.Wr;
+          const Wh = pcell.Wh;
+          Dht[T][j] = Wz.transpose().multiply(Dzt[T][j+1]).add(Wr.transpose().multiply(Drt[T][j+1])).add(Wh.transpose().multiply(Dh_candidate[T][j+1]));
+          Dzt[T][j] = Dht[T][j].elementMultiply(h_candidate.subtract(ht_prev)).elementMultiply(zt.applyFunction(GRUNetwork.sigmoid_derivative));
+          Dh_candidate[T][j] = Dht[T][j].elementMultiply(zt.subtract(zt.elementMultiply(h_candidate.elementMultiply(h_candidate))));
+          Drt[T][j] = Dh_candidate[T][j].elementMultiply(cell.Uh.transpose().multiply(ht_prev)).elementMultiply(rt.applyFunction(GRUNetwork.sigmoid_derivative));
+        }
+
+        for (let t = T - 1; t >= 0; --t)
+        {
+          for (let j = J; j >= 0; --j)
+          {
+            const cell = gnet.gru_cells[j][t];
+            const ht_prev = cell.ht_prev;
+            const zt = cell.zt;
+            const rt = cell.rt;
+             const h_candidate = cell.h_candidate;
+            const Uz = cell.Uz;
+            const Ur = cell.Ur;
+            const Uh = cell.Uh;
+            if (j < J)
+            {
+              const pcell = gnet.gru_cells[j+1][t];
+              const Wz = pcell.Wz;
+              const Wr = pcell.Wr;
+              const Wh = pcell.Wh;
+              Dht[t][j] = Wz.transpose().multiply(Dzt[t][j+1]).add(Wr.transpose().multiply(Drt[t][j+1])).add(Wh.transpose().multiply(Dh_candidate[t][j+1]));
+            }
+            else Dht[t][j] = Dht[T][j];
+            Dht[t][j] = Dht[t][j].add(Uz.transpose().multiply(Dzt[t+1][j]).add(Ur.transpose().multiply(Drt[t+1][j])).add(Uh.transpose().multiply(Dh_candidate[t+1][j].elementMultiply(rt))));
+            Dzt[t][j] = Dht[t][j].elementMultiply(h_candidate.subtract(ht_prev)).elementMultiply(zt.applyFunction(GRUNetwork.sigmoid_derivative));
+            Dh_candidate[t][j] = Dht[t][j].elementMultiply(zt.subtract(zt.elementMultiply(h_candidate.elementMultiply(h_candidate))));
+            Drt[t][j] = Dh_candidate[t][j].elementMultiply(Uh.transpose().multiply(ht_prev)).elementMultiply(rt.applyFunction(GRUNetwork.sigmoid_derivative));
+          }
+        }
+
+
+
+
 
         for (let t = gnet.sequence_length - 1; t >= 0; --t)
         {
@@ -276,12 +349,13 @@ class GRUNetwork
           dWo_accum.add(d_output.multiply(hidden_states[t].transpose()));
           dbo_accum.add(d_output);
 
-          gnet.backward(dht, input_sequences[i][t], gnet.gru_cells, t,
+//          gnet.backward(dht, input_sequences[i][t], gnet.gru_cells, t,
+          gnet.backward(Dht[t], Drt[t], Dzt[t], Dh_candidate[t], input_sequences[i][t], gnet.gru_cells, t,
                         dWz_accum, dUz_accum, dbz_accum,
                         dWr_accum, dUr_accum, dbr_accum,
                         dWh_accum, dUh_accum, dbh_accum, clip_threshold);
 
-          dht = dht.add(gnet.Wo.transpose().multiply(d_output));
+//          dht = dht.add(gnet.Wo.transpose().multiply(d_output));
         }
 
         for (let j = 0; j < gnet.num_layers; ++j)
