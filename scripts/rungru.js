@@ -79,7 +79,7 @@ function runGRUNetwork()
   const {srcData, srcFactors} = normalizeDataset(reData);
 
   const input_size = srcData.length - 1;
-  const hidden_size = parseInt(document.getElementById('neurons').value);
+  const hidden_size = parseInt(document.getElementById('cells').value);
   const num_layers = parseInt(document.getElementById('batches').value);
   const sequence_length = parseInt(document.getElementById('window').value);
   const seed = parseInt(document.getElementById('seed').value);
@@ -130,13 +130,12 @@ function runGRUNetwork()
 
     //console.log(options, JSON.stringify(options, null, 2));
 
-    importScripts(script_path + "rng.js");
-    importScripts(script_path + "matrix.js");
-    importScripts(script_path + "grucell.js");
-    importScripts(script_path + "grunet.js");
+    importScripts(script_path + "rng.js#");
+    importScripts(script_path + "matrix.js#");
+    importScripts(script_path + "grucell.js#");
+    importScripts(script_path + "grunet.js#");
 
-    rng = new XorShiftRNG(options.seed);
-    //rng = new XorShift128Plus(options.seed);
+    rng = new SeededRNG(options.seed);
 
     const input_size = options.input_size;
     const hidden_size = options.hidden_size;
@@ -211,6 +210,23 @@ function runGRUNetwork()
   {
     const depcol = 1*document.getElementById('depcol').value;
 
+/*
+if (e.data.type == 'mse_loss')
+{
+const datasets = e.data.datasets;
+  let s = 0.0;
+  let k = 0;
+  const l = Math.floor(0.01 * datasets[1].length * training_pct / sequence_length) * sequence_length;
+  for (k = 0; k < l; k++)
+  {
+    let v = datasets[1][k].y - datasets[2][k].y;
+    s += v * v;
+  }
+  s /= 1.0 * k;
+  document.getElementById('output').innerText += `-- precomputed loss for ${k} things: ${s}\n`;
+}
+*/
+
     if (e.data.type == 'progress')
     {
       const output = document.getElementById("output");
@@ -226,7 +242,18 @@ function runGRUNetwork()
       }
 
       const datasets = e.data.datasets; // [input_data, predicted_data, actual_data];
-
+/*
+  let s = 0.0;
+  let k = 0;
+  const l = Math.floor(0.01 * datasets[1].length * training_pct / sequence_length) * sequence_length;
+  for (k = 0; k < l; k++)
+  {
+    let v = datasets[1][k].y - datasets[2][k].y;
+    s += v * v;
+  }
+  s /= 1.0 * k;
+  document.getElementById('output').innerText += `-- recomputed loss for ${k} things: ${s}\n`;
+*/
       // Denormalize the result
       for (let i = 0; i < datasets[1].length; i++)
       {
@@ -286,6 +313,22 @@ function runGRUNetwork()
       }
       document.getElementById('theResult').innerHTML = "";
       document.getElementById('theResult').appendChild(plotDatasets([reData[parseInt(depcol)], datasets[1]], xMinMax[0], xMinMax[1], yMinMax[0], yMinMax[1],800,400, plotoptions));
+
+/*
+  let s = 0.0;
+  let k = 0;
+  // for (k = 0; k < 0.01 * (yResult.length * document.getElementById('training').value); k++)
+  const l = Math.floor(0.01 * yResult.length * training_pct / sequence_length) * sequence_length;
+  for (k = 0; k < l; k++)
+  {
+//    let v = reData[depcol][k].y - yResult[k].y;
+    let v = datasets[1][k].y - datasets[2][k].y;
+    s += v * v;
+  }
+  s /= 1.0 * k;
+  document.getElementById('output').innerText += `-- recomputed loss for ${k} things: ${s}\n`;
+*/
+
     }
   });
 

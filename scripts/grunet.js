@@ -153,13 +153,14 @@ class GRUNetwork
     return 1 - t * t;
   }
 
-  train(input_sequences, target_sequences, initial_learning_rate, epochs, clip_threshold, progressCallback)
+  train(input_sequences, target_sequences, initial_learning_rate, epochs, clip_threshold, progressCallback, runOnTimer = true)
   {
     let best_loss = 9e99;
     let last_loss = 9e99;
     let best_gru_cells = null;
     let best_Wo = null;
     let best_bo = null;
+    let best_epoch = 0;
 
     let learning_rate = initial_learning_rate;
 
@@ -249,7 +250,7 @@ class GRUNetwork
           outputs.push(output);
         }
 
-        total_loss += gnet.mse_loss(outputs, target_sequences[i]);
+//        total_loss += gnet.mse_loss(outputs, target_sequences[i]);
 
         const dWz_accum = Array(gnet.num_layers).fill().map((_, j) =>
         {
@@ -462,11 +463,36 @@ class GRUNetwork
         gnet.bo = gnet.bo.subtract(dbo_accum.multiply(1.0 * learning_rate / input_sequences.length));
       }
 
+
+
+      const ht_prev = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, 1));
+      for (let i = 0; i < input_sequences.length; ++i)
+      {
+        const outputs = [];
+        for (let t = 0; t < gnet.sequence_length; ++t)
+        {
+          let input = input_sequences[i][t];
+          for (let j = 0; j < gnet.num_layers; ++j)
+          {
+            input = gnet.gru_cells[j][t].forward(input, ht_prev[j]);
+            ht_prev[j] = input;
+          }
+          const output = gnet.Wo.multiply(input).add(gnet.bo);
+          outputs.push(output);
+        }
+        total_loss += gnet.mse_loss(outputs, target_sequences[i]);
+      }
+
+//progressCallback("", "mse_loss");
+
+
+
       total_loss /= input_sequences.length;
       gnet.log(`Epoch ${epoch+1} Loss: ${total_loss}`, 'done', progressCallback);
 
       if (total_loss < best_loss && !gnet.stopWorker)
       {
+        best_epoch = epoch;
         best_loss = total_loss;
         best_gru_cells = gnet.gru_cells.map(layer => layer.map(cell => Object.assign(Object.create(Object.getPrototypeOf(cell)), cell)));
         best_Wo = new Matrix(gnet.Wo.rows, gnet.Wo.cols);
@@ -505,12 +531,30 @@ class GRUNetwork
       }
       last_loss = total_loss;
 
-      //return true;
-      if (++epoch < epochs) setTimeout(function() { doEpoch(gnet, epoch); }, 0);
-      else gnet.log(`Completed.`, 'fini', progressCallback);
+      if (runOnTimer)
+      {
+        if (++epoch < epochs) setTimeout(function() { doEpoch(gnet, epoch); }, 0);
+        else
+        {
+          if (best_gru_cells)
+          {
+            gnet.gru_cells = best_gru_cells;
+            gnet.Wo = best_Wo;
+            gnet.bo = best_bo;
+          }
+          gnet.log(`Completed (best epoch: ${best_epoch+1}).`, 'fini', progressCallback);
+        }
+      }
+      else return true;
     }
-    //for (let epoch = 0; epoch < epochs; ++epoch) if (!doEpoch(this, epoch)) break;
-    doEpoch(this, 0);
+    if (runOnTimer)
+    {
+      doEpoch(this, 0);
+    }
+    else
+    {
+      for (let epoch = 0; epoch < epochs; ++epoch) if (!doEpoch(this, epoch)) break;
+    }
   }
 }
 

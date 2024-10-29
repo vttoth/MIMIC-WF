@@ -1,3 +1,4 @@
+/*
 // A sensible RNG
 class XorShiftRNG
 {
@@ -28,6 +29,23 @@ class XorShiftRNG
 // Usage:
 //const seed = 123456789; // Replace with your desired seed
 //const rng = new XorShiftRNG(seed);
+*/
+
+class SeededRNG
+{
+  constructor(seed = Date.now())
+  {
+    this.seed = seed % 2147483647;
+    if (this.seed <= 0) this.seed += 2147483646;
+  }
+
+  next()
+  {
+    this.seed = (this.seed * 16807) % 2147483647;
+    return (this.seed - 1) / 2147483646;
+  }
+}
+
 let rng;
 
 // Define a function that uses the seeded RNG

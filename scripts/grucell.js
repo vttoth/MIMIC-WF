@@ -17,13 +17,16 @@ class GRUCell {
 
     this.Wz.XGrandomize(input_size, hidden_size);
     this.Uz.XGrandomize(hidden_size, hidden_size);
-    this.bz.grandomize(0, 0.25);
+//    this.bz.grandomize(0, 0.25);
+//    this.bz.grandomize(0.1, 0.1);
     this.Wr.XGrandomize(input_size, hidden_size);
     this.Ur.XGrandomize(hidden_size, hidden_size);
-    this.br.randomize(1, 2);
+//    this.br.randomize(1, 2);
+//    this.br.randomize(1, 1);
     this.Wh.XGrandomize(input_size, hidden_size);
     this.Uh.XGrandomize(hidden_size, hidden_size);
-    this.bh.grandomize(0, 0.25);
+//    this.bh.grandomize(0, 0.5);
+//    this.bh.grandomize(0.25, 0.25);
   }
 
   forward(xt, ht_prev) {

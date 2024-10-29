@@ -52,7 +52,7 @@ function saveAll()
     window:document.getElementById('window').value,
     seed:document.getElementById('seed').value,
     batches:document.getElementById('batches').value,
-    neurons:document.getElementById('neurons').value,
+    cells:document.getElementById('cells').value,
     epochs:document.getElementById('epochs').value,
     learnrate:document.getElementById('learnrate').value,
     train:document.getElementById('training').value,
@@ -63,7 +63,8 @@ function saveAll()
     adam:document.getElementById('useAdam').checked,
     beta1:document.getElementById('beta1').value,
     beta2:document.getElementById('beta2').value,
-    epsilon:document.getElementById('epsilon').value
+    epsilon:document.getElementById('epsilon').value,
+    useTF:document.getElementById('useTF').checked
   });
   let blob = new Blob([savedata], {type: "application/json"});
   let url = URL.createObjectURL(blob);
@@ -105,7 +106,7 @@ function loadAll()
       document.getElementById('depcol').value = savedata.depcol;
       document.getElementById('window').value = savedata.window;
       document.getElementById('batches').value = savedata.batches;
-      document.getElementById('neurons').value = savedata.neurons;
+      document.getElementById('cells').value = savedata.neurons ? savedata.neurons : savedata.cells;
       document.getElementById('epochs').value = savedata.epochs;
       if (savedata.learnrate != undefined) document.getElementById('learnrate').value = savedata.learnrate;
       document.getElementById('training').value = savedata.train;
@@ -128,6 +129,8 @@ function loadAll()
       document.getElementById('getdata').disabled = false;
       document.getElementById('doResample').disabled = false;
       document.getElementById('doPredict').disabled = false;
+
+      document.getElementById('useTF').checked = (savedata.useTF != undefined) && savedata.useTF;
 
       document.querySelectorAll("#checkboxes input").forEach(item =>
       {
@@ -715,6 +718,403 @@ function trimAndImputeData(dataArrays)
   return imputedDataArrays;
 }
 
+function doPredict()
+{
+  const steps = 1*document.getElementById('window').value;
+  const train = 1*document.getElementById('training').value;
+  const epochs = 1*document.getElementById('epochs').value;
+  const batches = 1;
+  const layers = 1*document.getElementById('batches').value;	// NB: Reuse of a pre-existing parameter!
+  const cells = 1*document.getElementById('cells').value;
+  const depcol = 1*document.getElementById('depcol').value;
+  const patience = 1*document.getElementById('patience').value;
+  const validation = 0; // 1*document.getElementById('validation').value;
+
+  const learnrate = 1*document.getElementById('learnrate').value;
+  const useAdam = document.getElementById('useAdam').checked;
+  const beta1 = 1*document.getElementById('beta1').value;
+  const beta2 = 1*document.getElementById('beta2').value;
+  const epsilon = 1*document.getElementById('epsilon').value;
+  const seed = 1 * document.getElementById('seed').value;
+
+
+  document.body.style.cursor = 'wait';
+  document.getElementById('overlay').style.display = 'block';
+  document.getElementById('theResult').innerHTML = "";
+
+  document.getElementById('output').innerText += "Preparing the data...\n";
+  document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+
+  function prePredict(e)
+  {
+    let theEpoch = 0;
+    async function runPrediction(xData, yData, xInput, train, steps, batches, layers, epochs, cells, patience, validation, learnrate, useAdam, beta1, beta2, epsilon, seed)
+    {
+      importScripts("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest");
+
+      function normalizeAndPackageData(dataArrays, tLabel, vLabel, steps, batches)
+      {
+        // Normalize each data array individually
+        const normalizedDataArrays = dataArrays.map(arr =>
+        {
+          const values = arr.map(d => d[vLabel]);
+          const minValue = Math.min(...values);
+          const maxValue = Math.max(...values);
+          return arr.map(d => (d[vLabel] - minValue) / (maxValue - minValue));
+        });
+
+        // Repackage the data for TensorFlow.js
+        // Assuming each sub-array represents a feature dimension and all arrays are of the same length
+        const numSamples = Math.floor(normalizedDataArrays[0].length / steps / batches) * batches;
+        const numFeatures = normalizedDataArrays.length;
+        const packagedData = [];
+
+        for (let i = 0; i < numSamples; i++)
+        {
+          for (let j = 0; j < steps; j++)
+          {
+            for (let k = 0; k < numFeatures; k++)
+            {
+              packagedData.push(normalizedDataArrays[k][i*steps +j]);
+            }
+          }
+        }
+
+        // Convert to a 3D tensor: [numSamples, numTimeSteps, numFeatures]
+        const tensorData = tf.tensor3d(packagedData, [numSamples, steps, numFeatures]);
+
+        return tensorData;
+      }
+
+      // Define a sequential model
+      const model = tf.sequential();
+
+      for (let l = 0; l < layers; l++)
+      {
+        // Add a GRU layer
+        model.add(tf.layers.gru(
+        {
+          units: cells,
+          inputShape: [steps, l == 0 ? xData.length : cells],
+          returnSequences: true, // Set to true if you want the output for each time step
+          stateful: true,
+          batchSize: batches,
+          activation: 'tanh', // Match your custom implementation
+          recurrentActivation: 'sigmoid', // Default for GRU
+          kernelInitializer: tf.initializers.glorotUniform({ seed: seed++ }),
+          recurrentInitializer: tf.initializers.glorotUniform({ seed: seed++ }), // Set the seed for recurrent weights
+          biasInitializer: 'zeros' // Typically biases are initialized to zeros
+        }));
+      }
+
+      // Add a time-distributed dense layer to predict a sequence of 'z' values
+      model.add(tf.layers.timeDistributed(
+      {
+        layer: tf.layers.dense(
+        {
+          units: 1,
+          activation: 'linear',
+          kernelInitializer: tf.initializers.glorotUniform({ seed: seed++ })
+        })
+      }));
+
+      self.postMessage({progress: "Compiling the model..."});
+
+      // Compile the model
+      model.compile(
+      {
+        loss: 'meanSquaredError',
+        //optimizer: 'adam'
+        //optimizer: new tf.train.adam()
+        //optimizer: new tf.train.rmsprop(0.3)
+        optimizer: (useAdam ?
+           new tf.train.adam(learnrate, beta1, beta2, epsilon) :
+           new tf.train.rmsprop(learnrate) )
+
+      });
+
+      if (false)
+      {
+        // Log the initial weights and biases for each layer
+        model.layers.forEach((layer, index) =>
+        {
+          layer.getWeights().forEach((weightTensor, weightIndex) =>
+          {
+            // Print the weight tensor values to the console
+            weightTensor.data().then(data =>
+            {
+              console.log(`Layer ${index} - Weight ${weightIndex}:`, Array.from(data));
+            });
+          });
+        });
+      }
+
+      self.postMessage({progress: "Packaging the data..."});
+
+      const trainSize = Math.floor(xData[0].length * (1 - 0.01*validation) / (steps*batches)) * (steps*batches);
+console.log("trainSize = " + trainSize);
+console.log("yData[0].length = " + yData[0].length);
+      const trainXData = xData.map(a => a.slice(0, trainSize));
+      const trainYData = yData.map(a => a.slice(0, trainSize));
+      const valXData = xData.map(a => a.slice(trainSize));
+      const valYData = yData.map(a => a.slice(trainSize));
+
+      // Package and normalize data separately for training and validation
+      let xs = normalizeAndPackageData(trainXData, "x", "y", steps, batches);
+      let ys = normalizeAndPackageData(trainYData, "x", "y", steps, batches);
+      let valXs = normalizeAndPackageData(valXData, "x", "y", steps, batches);
+      let valYs = normalizeAndPackageData(valYData, "x", "y", steps, batches);
+console.log("valXData[0].length = " + valXData[0].length);
+      const doValidation = valXData[0].length >= steps*batches;
+
+      self.postMessage({progress: "Training the model..."});
+
+      // Define early stopping parameters
+      const min_delta = 0;
+      let bestValLoss = Number.POSITIVE_INFINITY;
+      let epochsWithoutImprovement = 0;
+      let bestWeights = null; // To store the best weights
+
+      const modelParams =
+      {
+        epochs: epochs,
+        batchSize: batches,
+        shuffle: false,
+        callbacks: 
+        {
+          onEpochBegin: () =>
+          {
+            model.resetStates();
+          },
+          onEpochEnd: (epoch, logs) =>
+          {
+            self.postMessage(
+            {
+              progress: `Epoch ${epoch+1}: ${doValidation ? "validation " : ""}loss = ${(doValidation ? logs.val_loss : logs.loss)}`
+            });
+            if (!doValidation)
+            {
+              theEpoch = epoch;
+              return;
+            }
+            if (logs.val_loss < bestValLoss - min_delta)
+            {
+              bestValLoss = logs.val_loss;
+              epochsWithoutImprovement = 0;
+              // Save a copy of the current best weights
+              bestWeights = model.getWeights().map(w => w.clone());
+              theEpoch = epoch;
+            }
+            else
+            {
+              epochsWithoutImprovement++;
+              if (epochsWithoutImprovement >= patience)
+              {
+                model.stopTraining = true; // Stop the training
+                if (bestWeights)
+                {
+                  model.setWeights(bestWeights); // Restore the best weights
+                  // Dispose the cloned tensors to free memory
+                  bestWeights.forEach(w => w.dispose());
+                }
+              }
+            }
+          }
+        }
+      };
+
+      if (doValidation) modelParams.validationData = [valXs, valYs];
+
+      // Train the model
+      await model.fit(xs, ys, modelParams);
+
+      self.postMessage({progress: "Running the model..."});
+
+      model.resetStates();
+
+      let testInput = normalizeAndPackageData(xInput, "x", "y", steps, batches);
+      return result = model.predict(testInput, { batchSize: batches });
+    }
+
+    if (e.data.cmd === 'run')
+    {
+      let xData = [];
+      let yData = [];
+      let xInput = [];
+
+      let reData = e.data.reData;
+      let depcol = e.data.depcol;
+      let train = e.data.train;
+      let steps = e.data.steps;
+      let batches = e.data.batches;
+      let layers = e.data.layers;
+      let epochs = e.data.epochs;
+      let cells = e.data.cells;
+      let patience = e.data.patience;
+      let validation = e.data.validation;
+      let learnrate = e.data.learnrate;
+      let useAdam = e.data.useAdam;
+      let beta1 = e.data.beta1;
+      let beta2 = e.data.beta2;
+      let epsilon = e.data.epsilon;
+      let seed = e.data.seed;
+
+      for (let i = 0; i < reData.length; i++)
+      {
+        if (i == depcol) yData.push(reData[i].toSpliced(Math.floor(0.01*train*reData[i].length)));
+        else
+        {
+          xData.push(reData[i].toSpliced(Math.floor(0.01*train*reData[i].length)));
+          xInput.push(reData[i].toSpliced(0, Math.floor(0.01*train*reData[i].length)));
+        }
+      }
+
+      self.postMessage({progress: "Running the predictor..."});
+
+      runPrediction(xData, yData, xInput, train, steps, batches, layers, epochs, cells, patience, validation, learnrate, useAdam, beta1, beta2, epsilon, seed)
+      .then(result =>
+      {
+        let yResult = [];
+        let i = 0;
+        function flatten(r)
+        {
+          for (let k = 0; k < r.length; k++)
+          {
+            if (Array.isArray(r[k])) flatten(r[k]);
+            else
+            {
+              var v = r[k] * (maxValue - minValue) + minValue;
+              yResult.push({x: xInput[0][i++].x, y: v});
+            }
+          }
+        }
+        const allValues = yData.reduce((acc, arr) => acc.concat(arr.map(d => d.y)), []);
+        const minValue = Math.min(...allValues);
+        const maxValue = Math.max(...allValues);
+console.log("minValue = " + minValue + ", maxValue = " + maxValue);
+        const resultData = result.dataSync();
+        result.dispose();
+        flatten(resultData);
+        self.postMessage({yResult: yResult, epochs: theEpoch});
+      }).catch(error =>
+      {
+console.log(error);
+        //self.postMessage({error: "An error has occured."});
+        self.postMessage({error: error.toString().split('\n')[0]});
+      });
+    }
+  }
+
+  let worker = new Worker(window.URL.createObjectURL(new Blob(["onmessage=" + prePredict.toString()], {type: "text/javascript"})));
+
+  worker.onerror = function(e)
+  {
+    console.log("There was an error in the worker (1).");
+  }
+
+  worker.onmessage = function(e)
+  {
+    if (e.data.progress != undefined)
+    {
+      document.getElementById('output').innerText += e.data.progress + "\n";
+      document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+      console.log(e.data.progress);
+    }
+    else if (e.data.error != undefined)
+    {
+      document.getElementById('output').innerHTML = "<span class='error'>" + e.data.error + "</span>";
+      document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+      document.body.style.cursor = '';
+      document.getElementById('overlay').style.display = 'none';
+    }
+    else
+    {
+      yResult = e.data.yResult;
+
+      showResult(e.data.epochs);
+      plotResult();
+      document.body.style.cursor = '';
+      document.getElementById('overlay').style.display = 'none';
+    }
+  }
+
+  worker.postMessage(
+  {
+    cmd: 'run',
+    reData: reData,
+    depcol: depcol,
+    train: train,
+    steps: steps,
+    batches: batches,
+    layers: layers,
+    epochs: epochs,
+    cells: cells,
+    patience: patience,
+    validation: validation,
+    learnrate: learnrate,
+    useAdam: useAdam,
+    beta1: beta1,
+    beta2: beta2,
+    epsilon: epsilon,
+    seed: seed });
+}
+
+function showResult(maxEpoch)
+{
+  const depcol = 1*document.getElementById('depcol').value;
+  let sumOfSquares = 0;
+  let count = 0;
+  let reDataIndex = 0;
+  let sum = 0;
+  let sum2 = 0;
+
+  // Find the starting index in reData[depcol] that matches the first x in yResult
+  while (reDataIndex < reData[depcol].length && Math.abs(reData[depcol][reDataIndex].x - yResult[0].x) >= 1e-12)
+  {
+    reDataIndex++;
+  }
+
+  // If we didn't find a match, throw an error
+  if (reDataIndex >= reData[depcol].length)
+  {
+    throw new Error('No matching starting element found in reData[depcol]');
+  }
+
+  // Now iterate through yResult and the corresponding range in reData[depcol] simultaneously
+  for (let i = 0; i < yResult.length; i++)
+  {
+    // Check if the x values match within the tolerance
+    if (Math.abs(reData[depcol][reDataIndex].x - yResult[i].x) < 1e-12)
+    {
+      let difference = yResult[i].y - reData[depcol][reDataIndex].y;
+      sumOfSquares += difference * difference;
+      count++;
+      sum += reData[depcol][reDataIndex].y;
+      sum2 += reData[depcol][reDataIndex].y ** 2;
+    } else {
+      // If they don't match, we may have gone past the contiguous subset
+      break;
+    }
+    reDataIndex++;
+  }
+
+  // Calculate the chi-squared per degree of freedom
+  let degreesOfFreedom = count - 1; // Assuming one parameter fitted
+  if (degreesOfFreedom <= 0)
+  {
+    throw new Error('Degrees of freedom must be positive');
+  }
+  let variance = (sum2 - sum**2 / count) / count;
+  let chiSquaredPerDF = sumOfSquares / variance / degreesOfFreedom;
+  document.getElementById('output').innerHTML +=
+    "(&chi;&sup2;)<sub>&nu;</sub> = " + chiSquaredPerDF.toPrecision(5) +
+    " (epochs = " + (maxEpoch*1+1) + ")";
+  document.getElementById('output').innerText += "\n";
+  document.getElementById('result').innerHTML =
+    "(&chi;&sup2;)<sub>&nu;</sub> = " + chiSquaredPerDF.toPrecision(5);
+  document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+}
+
 function plotResult()
 {
   const depcol = 1*document.getElementById('depcol').value;
@@ -736,6 +1136,17 @@ function plotResult()
   let theResult = document.getElementById('theResult');
   theResult.innerHTML = "";
   theResult.appendChild(svgData);
+/*
+  let s = 0.0;
+  let i = 0;
+  for (i = 0; i < 0.01 * (yResult.length * document.getElementById('training').value); i++)
+  {
+    let v = reData[depcol][i].y - yResult[i].y;
+    s += v * v;
+  }
+  s /= 1.0 * i;
+  document.getElementById('output').innerText += "-- computed loss: " + s + "\n";
+*/
 }
 
 function onAdam()
