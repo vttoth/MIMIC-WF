@@ -2,8 +2,6 @@
 
 $file = $_GET['file'];
 $column = $_GET['column'];
-//$file='80030009n.csv';
-//$column='NBPd [mmHg]';
 
 $hea = fopen("./HEAD/" . str_replace("n.csv", ".hea", $file), 'r');
 $freq = 3.6e6;
@@ -19,15 +17,10 @@ while ($line = fgets($hea))
 }
 fclose($hea);
 
-//echo "Factor is " . $freq . "\n";
-//die;
-
 $csv = fopen("./DATA/" . $file, 'r');
 $headers = fgetcsv($csv);
 
 $index = array_search($column, $headers);
-
-//echo "INDEX: " . $index . "\n";
 
 $rows = [];
 $count = 0;

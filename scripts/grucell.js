@@ -1,5 +1,7 @@
-class GRUCell {
-  constructor(input_size, hidden_size) {
+class GRUCell
+{
+  constructor(input_size, hidden_size)
+  {
     this.input_size = input_size;
     this.hidden_size = hidden_size;
 
@@ -17,19 +19,16 @@ class GRUCell {
 
     this.Wz.XGrandomize(input_size, hidden_size);
     this.Uz.XGrandomize(hidden_size, hidden_size);
-//    this.bz.grandomize(0, 0.25);
-//    this.bz.grandomize(0.1, 0.1);
+
     this.Wr.XGrandomize(input_size, hidden_size);
     this.Ur.XGrandomize(hidden_size, hidden_size);
-//    this.br.randomize(1, 2);
-//    this.br.randomize(1, 1);
+
     this.Wh.XGrandomize(input_size, hidden_size);
     this.Uh.XGrandomize(hidden_size, hidden_size);
-//    this.bh.grandomize(0, 0.5);
-//    this.bh.grandomize(0.25, 0.25);
   }
 
-  forward(xt, ht_prev) {
+  forward(xt, ht_prev)
+  {
     this.zt = this.Wz.multiply(xt).add(this.Uz.multiply(ht_prev)).add(this.bz).applyFunction(GRUCell.sigmoid);
     this.rt = this.Wr.multiply(xt).add(this.Ur.multiply(ht_prev)).add(this.br).applyFunction(GRUCell.sigmoid);
     this.h_candidate = this.Wh.multiply(xt).add(this.Uh.multiply(ht_prev.elementMultiply(this.rt))).add(this.bh).applyFunction(Math.tanh);
@@ -40,7 +39,8 @@ class GRUCell {
     return this.ht;
   }
 
-  static sigmoid(x) {
+  static sigmoid(x)
+  {
     if (x < -40) return 0.0;
     else if (x > 40) return 1.0;
     else return 1.0 / (1.0 + Math.exp(-x));

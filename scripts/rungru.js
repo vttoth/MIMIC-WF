@@ -95,11 +95,9 @@ function runGRUNetwork()
   const beta2 = adam ? parseFloat(document.getElementById('beta2').value) : 0.0;
   const epsilon = parseFloat(document.getElementById('epsilon').value);
   const clip_threshold = 1000;
-  //const beta1 = 0.0;//9;
-  //const beta2 = 0.0;//999;
-  //const epsilon = 0.0; // 8;
 
-  const options = {
+  const options =
+  {
     learning_rate_decay_factor,
     min_learning_rate,
     min_loss_improvement,
@@ -128,7 +126,6 @@ function runGRUNetwork()
     const { command, script_path, input_sequences, target_sequences, test_sequences, predict_sequences,
             initial_learning_rate, epochs, clip_threshold, options } = e.data;
 
-    //console.log(options, JSON.stringify(options, null, 2));
 
     importScripts(script_path + "rng.js#");
     importScripts(script_path + "matrix.js#");
@@ -210,23 +207,6 @@ function runGRUNetwork()
   {
     const depcol = 1*document.getElementById('depcol').value;
 
-/*
-if (e.data.type == 'mse_loss')
-{
-const datasets = e.data.datasets;
-  let s = 0.0;
-  let k = 0;
-  const l = Math.floor(0.01 * datasets[1].length * training_pct / sequence_length) * sequence_length;
-  for (k = 0; k < l; k++)
-  {
-    let v = datasets[1][k].y - datasets[2][k].y;
-    s += v * v;
-  }
-  s /= 1.0 * k;
-  document.getElementById('output').innerText += `-- precomputed loss for ${k} things: ${s}\n`;
-}
-*/
-
     if (e.data.type == 'progress')
     {
       const output = document.getElementById("output");
@@ -242,18 +222,7 @@ const datasets = e.data.datasets;
       }
 
       const datasets = e.data.datasets; // [input_data, predicted_data, actual_data];
-/*
-  let s = 0.0;
-  let k = 0;
-  const l = Math.floor(0.01 * datasets[1].length * training_pct / sequence_length) * sequence_length;
-  for (k = 0; k < l; k++)
-  {
-    let v = datasets[1][k].y - datasets[2][k].y;
-    s += v * v;
-  }
-  s /= 1.0 * k;
-  document.getElementById('output').innerText += `-- recomputed loss for ${k} things: ${s}\n`;
-*/
+
       // Denormalize the result
       for (let i = 0; i < datasets[1].length; i++)
       {
@@ -313,22 +282,6 @@ const datasets = e.data.datasets;
       }
       document.getElementById('theResult').innerHTML = "";
       document.getElementById('theResult').appendChild(plotDatasets([reData[parseInt(depcol)], datasets[1]], xMinMax[0], xMinMax[1], yMinMax[0], yMinMax[1],800,400, plotoptions));
-
-/*
-  let s = 0.0;
-  let k = 0;
-  // for (k = 0; k < 0.01 * (yResult.length * document.getElementById('training').value); k++)
-  const l = Math.floor(0.01 * yResult.length * training_pct / sequence_length) * sequence_length;
-  for (k = 0; k < l; k++)
-  {
-//    let v = reData[depcol][k].y - yResult[k].y;
-    let v = datasets[1][k].y - datasets[2][k].y;
-    s += v * v;
-  }
-  s /= 1.0 * k;
-  document.getElementById('output').innerText += `-- recomputed loss for ${k} things: ${s}\n`;
-*/
-
     }
   });
 

@@ -824,36 +824,14 @@ function doPredict()
       model.compile(
       {
         loss: 'meanSquaredError',
-        //optimizer: 'adam'
-        //optimizer: new tf.train.adam()
-        //optimizer: new tf.train.rmsprop(0.3)
         optimizer: (useAdam ?
            new tf.train.adam(learnrate, beta1, beta2, epsilon) :
            new tf.train.rmsprop(learnrate) )
-
       });
-
-      if (false)
-      {
-        // Log the initial weights and biases for each layer
-        model.layers.forEach((layer, index) =>
-        {
-          layer.getWeights().forEach((weightTensor, weightIndex) =>
-          {
-            // Print the weight tensor values to the console
-            weightTensor.data().then(data =>
-            {
-              console.log(`Layer ${index} - Weight ${weightIndex}:`, Array.from(data));
-            });
-          });
-        });
-      }
 
       self.postMessage({progress: "Packaging the data..."});
 
       const trainSize = Math.floor(xData[0].length * (1 - 0.01*validation) / (steps*batches)) * (steps*batches);
-console.log("trainSize = " + trainSize);
-console.log("yData[0].length = " + yData[0].length);
       const trainXData = xData.map(a => a.slice(0, trainSize));
       const trainYData = yData.map(a => a.slice(0, trainSize));
       const valXData = xData.map(a => a.slice(trainSize));
@@ -864,7 +842,6 @@ console.log("yData[0].length = " + yData[0].length);
       let ys = normalizeAndPackageData(trainYData, "x", "y", steps, batches);
       let valXs = normalizeAndPackageData(valXData, "x", "y", steps, batches);
       let valYs = normalizeAndPackageData(valYData, "x", "y", steps, batches);
-console.log("valXData[0].length = " + valXData[0].length);
       const doValidation = valXData[0].length >= steps*batches;
 
       self.postMessage({progress: "Training the model..."});
@@ -991,14 +968,14 @@ console.log("valXData[0].length = " + valXData[0].length);
         const allValues = yData.reduce((acc, arr) => acc.concat(arr.map(d => d.y)), []);
         const minValue = Math.min(...allValues);
         const maxValue = Math.max(...allValues);
-console.log("minValue = " + minValue + ", maxValue = " + maxValue);
+        console.log("minValue = " + minValue + ", maxValue = " + maxValue);
         const resultData = result.dataSync();
         result.dispose();
         flatten(resultData);
         self.postMessage({yResult: yResult, epochs: theEpoch});
       }).catch(error =>
       {
-console.log(error);
+        console.log(error);
         //self.postMessage({error: "An error has occured."});
         self.postMessage({error: error.toString().split('\n')[0]});
       });
@@ -1136,17 +1113,6 @@ function plotResult()
   let theResult = document.getElementById('theResult');
   theResult.innerHTML = "";
   theResult.appendChild(svgData);
-/*
-  let s = 0.0;
-  let i = 0;
-  for (i = 0; i < 0.01 * (yResult.length * document.getElementById('training').value); i++)
-  {
-    let v = reData[depcol][i].y - yResult[i].y;
-    s += v * v;
-  }
-  s /= 1.0 * i;
-  document.getElementById('output').innerText += "-- computed loss: " + s + "\n";
-*/
 }
 
 function onAdam()

@@ -80,11 +80,6 @@
      <tr><td class='subopt'><span title="The first parameter of the Adam optimizer.">&beta;<sub>1</sub></span>:</td><td><input id='beta1' value = '0.9' disabled/></td></tr>
      <tr><td class='subopt'><span title="The second parameter of the Adam optimizer.">&beta;<sub>2</sub></span>:</td><td><input id='beta2' value = '0.999' disabled/></td></tr>
      <tr><td class='subopt'><span title="The softening parameter of the Adam optimizer.">&epsilon;</span>:</td><td><input id='epsilon' value = '1e-8' disabled /></td></tr>
-<!--
-     <tr><td colspan=2><h4>Early stopping parameters</h4></td></tr>
-     <tr><td><span title="Number of epochs with no improvement before training is terminated to prevent overfitting.">Patience</span>:</td><td><input id='patience' value='10'/></td></tr>
-     <tr><td><span title="Percentage of training data for use in monitoring to prevent overfitting.">Validation %</span>:</td><td><input id='validation' value='25'/></td></tr> -->
-<!--     <tr><td>&nbsp;</td><td><button id='doPredict' disabled onclick="doPredict()">Run model</button> -->
 <script lang='javascript'>
 function chooseGRU()
 {

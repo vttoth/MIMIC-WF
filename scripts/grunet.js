@@ -103,14 +103,10 @@ class GRUNetwork
       const dh_candidate = Dh_candidate[i];
       const drt = Drt[i];
 
-//      const dzt = dht.elementMultiply(h_candidate.subtract(ht_prev)).elementMultiply(zt.applyFunction(GRUNetwork.sigmoid_derivative));
       dWz_accum[i] = dWz_accum[i].add(dzt.multiply(xt.transpose()));
       dUz_accum[i] = dUz_accum[i].add(dzt.multiply(ht_prev.transpose()));
       dbz_accum[i] = dbz_accum[i].add(dzt);
 
-//      const dh_candidate = dht.elementMultiply(zt.subtract(zt.elementMultiply(h_candidate.elementMultiply(h_candidate))));
-
-//      const drt = dh_candidate.elementMultiply(cell.Uh.transpose().multiply(ht_prev)).elementMultiply(rt.applyFunction(GRUNetwork.sigmoid_derivative));
       dWr_accum[i] = dWr_accum[i].add(drt.multiply(xt.transpose()));
       dUr_accum[i] = dUr_accum[i].add(drt.multiply(ht_prev.transpose()));
       dbr_accum[i] = dbr_accum[i].add(drt);
@@ -138,8 +134,6 @@ class GRUNetwork
         dUh_accum[i] = dUh_accum[i].multiply(scale_factor);
         dbh_accum[i] = dbh_accum[i].multiply(scale_factor);
       }
-
-//      dht = cell.Uz.transpose().multiply(dzt).add(cell.Ur.transpose().multiply(drt)).add(cell.Uh.transpose().multiply(dh_candidate.elementMultiply(rt)));
     }
   }
 
@@ -250,8 +244,6 @@ class GRUNetwork
           outputs.push(output);
         }
 
-//        total_loss += gnet.mse_loss(outputs, target_sequences[i]);
-
         const dWz_accum = Array(gnet.num_layers).fill().map((_, j) =>
         {
           const input_size_layer = j === 0 ? gnet.input_size : gnet.hidden_size;
@@ -273,8 +265,6 @@ class GRUNetwork
         });
         const dUh_accum = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, gnet.hidden_size, 0.0));
         const dbh_accum = Array(gnet.num_layers).fill().map(() => new Matrix(gnet.hidden_size, 1, 0.0));
-
-//        let dht = gnet.Wo.transpose().multiply(outputs[gnet.sequence_length - 1].subtract(target_sequences[i][gnet.sequence_length - 1]).multiply(2.0 / outputs.length));
 
         const Dht = Array.from(Array(gnet.sequence_length), () => new Array(gnet.num_layers).fill(0));
         const Drt = Array.from(Array(gnet.sequence_length), () => new Array(gnet.num_layers).fill(0));
@@ -340,23 +330,16 @@ class GRUNetwork
           }
         }
 
-
-
-
-
         for (let t = gnet.sequence_length - 1; t >= 0; --t)
         {
           const d_output = outputs[t].subtract(target_sequences[i][t]).multiply(2.0 / outputs.length);
           dWo_accum.add(d_output.multiply(hidden_states[t].transpose()));
           dbo_accum.add(d_output);
 
-//          gnet.backward(dht, input_sequences[i][t], gnet.gru_cells, t,
           gnet.backward(Dht[t], Drt[t], Dzt[t], Dh_candidate[t], input_sequences[i][t], gnet.gru_cells, t,
                         dWz_accum, dUz_accum, dbz_accum,
                         dWr_accum, dUr_accum, dbr_accum,
                         dWh_accum, dUh_accum, dbh_accum, clip_threshold);
-
-//          dht = dht.add(gnet.Wo.transpose().multiply(d_output));
         }
 
         for (let j = 0; j < gnet.num_layers; ++j)
@@ -483,10 +466,6 @@ class GRUNetwork
         total_loss += gnet.mse_loss(outputs, target_sequences[i]);
       }
 
-//progressCallback("", "mse_loss");
-
-
-
       total_loss /= input_sequences.length;
       gnet.log(`Epoch ${epoch+1} Loss: ${total_loss}`, 'done', progressCallback);
 
@@ -557,4 +536,3 @@ class GRUNetwork
     }
   }
 }
-

@@ -1,4 +1,6 @@
 BACKUP
-DATA
+DATA/*
+!DATA/testdata*
+!DATA/mktest.py
 HEAD
 SCRAP
