@@ -1,4 +1,4 @@
-#GRU network to analyze MIMIC high-cadence data
+# GRU network to analyze MIMIC high-cadence data
 
 The purpose of this Web application is to analyze high-cadence numerical data that is offered as part of version IV of the Medical Information Mart for Intensive Care (MIMIC) database, using a gated recurrent unit (GRU) neural network.
 
@@ -29,6 +29,8 @@ While the model runs, the message area at the bottom of the user interface is us
 ## Data sources
 
 The software expects CSV files in the `DATA` subdirectory. This subdirectory is not populated, as access to the MIMIC data, though free, is conditional on the user obtaining the requisite credentials. There is one test file provided, `testdata.csv`, which contains a simple amplitude-modulated signal along with the modulating signal; the functioning of the GRU network can be tested and demonstrated by training the network to demodulate the modulated signal.
+
+The `DATA` subdirectory also contains `mktest.py`, a simple Python script that was used to generate `testdata.csv`. Additionally, `testdata.json` and `testdata-tf.json` are offered as two example projects using the same data file and similar hyperparameters, processing the data using the custom GRU library and TensorFlow, respectively.
 
 ## Saving and loading projects
 
