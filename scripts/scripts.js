@@ -1,3 +1,20 @@
+// scripts.js : MIMIC GRU analysis
+//
+// Copyright (c) 2025 Viktor T. Toth
+// 
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 let acronyms = {};
 
 async function loadAcronyms()
@@ -296,9 +313,73 @@ function plotDatasets(datasets, xMin, xMax, yMin, yMax, width, height, options =
     }
   }
 
+
+
+
+
+
+
+  // Function to downsample data preserving min and max
+  function downsample(data, targetPoints) {
+    if (data.length <= targetPoints) return data;
+
+    const result = [];
+    const bucketSize = data.length / targetPoints;
+
+    for (let i = 0; i < targetPoints; i++) {
+      const startIndex = Math.floor(i * bucketSize);
+      const endIndex = Math.floor((i + 1) * bucketSize);
+
+      let bucketMin = data[startIndex];
+      let bucketMax = data[startIndex];
+      let minIndex = startIndex;
+      let maxIndex = startIndex;
+
+      for (let j = startIndex + 1; j < endIndex && j < data.length; j++) {
+        if (data[j].y < bucketMin.y) {
+          bucketMin = data[j];
+          minIndex = j;
+        }
+        if (data[j].y > bucketMax.y) {
+          bucketMax = data[j];
+          maxIndex = j;
+        }
+      }
+
+      if (minIndex <= maxIndex) {
+        result.push(bucketMin);
+        if (minIndex !== maxIndex) {
+          result.push(bucketMax);
+        }
+      } else {
+        result.push(bucketMax);
+        result.push(bucketMin);
+      }
+    }
+
+    return result;
+  }
+
+  // Determine target number of points (adjust as needed)
+  const targetPoints = Math.min(width, 1000);
+
+
+
+
+
+
+
+
   datasets.forEach((data, index) =>
   {
-    const pathData = data.map((d, i) =>
+
+
+    // Downsample the data
+    const sampledData = downsample(data, targetPoints);
+
+
+    //const pathData = data.map((d, i) =>
+    const pathData = sampledData.map((d, i) =>
     {
       if (isNaN(d.y)) return "";
       const x = xScale(d.x);
@@ -377,7 +458,12 @@ doLoad = function()
 {
   let labels = [];
   let promises = [];
-  const file = document.querySelector("#files").value;
+  // const file = document.querySelector("#files").value;
+  const id = getPatientID();
+
+  if (id.length != 7) return;
+
+  const file = id + "n.csv";
 
   data = [];
   xMinMax = [];
@@ -442,13 +528,40 @@ doLoad = function()
   });
 }
 
+function getPatientID()
+{
+  if (document.querySelector('input[name="mimic_version"]:checked').value === 'iv')
+  {
+    const files = document.getElementById('files');
+    files.querySelector('option:first-child').removeAttribute('selected');
+    return files.value.substr(0,7);
+  }
+  else
+  {
+    const m3First = document.getElementById('mimic_iii_first').value;
+    const m3Second = document.getElementById('mimic_iii_second').value;
+    const m3Third = document.getElementById('mimic_iii_third').value;
+
+    return m3First + m3Second + m3Third;
+  }
+}
+
 function remsel()
 {
-  document.title = "MIMIC-high-cadence-" + document.querySelector("#files").value.substr(0,8) + "-1";
+  const id = getPatientID();
+
+  if (id.length == 7)
+  {
+    document.title = "MIMIC-high-cadence-" + id + "-1";
+    getColumns(id);
+  }
+  else
+  {
+    document.title = "MIMIC high-cadence data sets";
+    getColumns();
+  }
   document.querySelector("h1").innerText = document.title;
 
-  document.getElementById('files').querySelector('option:first-child').removeAttribute('selected');
-  getColumns();
   document.getElementById("getdata").disabled = true;
   document.getElementById('doResample').disabled = true;
   document.getElementById('doPredict').disabled = true;
@@ -623,29 +736,32 @@ function removeUnits(acronymWithUnits)
   return acronymWithUnits;
 }
 
-function getColumns()
+function getColumns(id)
 {
-  let select = document.querySelector("#files");
-  let file = select.value;
 
   document.getElementById('thePlot').innerHTML = "";
   document.getElementById('theSample').innerHTML = "";
   document.getElementById('theResult').innerHTML = "";
   document.getElementById('output').innerHTML = "";
+  let checkboxes = document.querySelector("#checkboxes");
+  checkboxes.innerHTML = "";
+
+
+  if (id == null) return;
+
+  const file = id + "n.csv";
+
   let lbl = 1;
 
   fetch(`getcol.php?file=${file}`)
   .then(res => res.json())
   .then(columns =>
   {
-    let checkboxes = document.querySelector("#checkboxes");
-    checkboxes.innerHTML = "";
-
     columns.sort((a, b) => a.localeCompare(b));
 
     for (let column of columns)
     {
-      if (column === "time") continue;
+      if (column.toLowerCase() === "time") continue;
       let div = document.createElement("div");
       let checkbox = document.createElement("input");
       checkbox.type = "checkbox";

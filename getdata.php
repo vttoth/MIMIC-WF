@@ -1,7 +1,7 @@
 <?php
 
 $file = $_GET['file'];
-$column = $_GET['column'];
+$column = urldecode($_GET['column']);
 
 $hea = fopen("./HEAD/" . str_replace("n.csv", ".hea", $file), 'r');
 $freq = 3.6e6;

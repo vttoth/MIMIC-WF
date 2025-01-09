@@ -120,7 +120,8 @@ body
   text-align: right;
 }
 
-.main input[type=checkbox]
+.main input[type=checkbox],
+.main input[type=radio]
 {
   width: revert !important;
 }
@@ -159,6 +160,20 @@ body
   left: 320px;
 */
   margin: 10px;
+}
+
+.psel
+{
+  margin-left: 20px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.getdata
+{
+  margin-top: 10px;
+  margin-bottom: 15px;
+  margin-left: 20px;
 }
 
 
